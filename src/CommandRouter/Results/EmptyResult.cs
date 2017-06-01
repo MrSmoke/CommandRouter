@@ -1,0 +1,13 @@
+﻿namespace CommandRouter.Results
+{
+    using System.IO;
+    using System.Threading.Tasks;
+
+    internal class EmptyResult : ICommandResult
+    {
+        public Task ExecuteAsync(Stream resultStream)
+        {
+            return Task.FromResult(0);
+        }
+    }
+}
