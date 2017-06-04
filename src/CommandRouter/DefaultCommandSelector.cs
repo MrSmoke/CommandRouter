@@ -7,7 +7,7 @@
 
     internal class DefaultCommandSelector : ICommandSelector
     {
-        public CommandMethod SelectCommand(string str, CommandTable commandTable, out object[] extra)
+        public CommandMethod SelectCommand(string str, ICommandTable commandTable, out object[] extra)
         {
             var tokens = Tokenizer.Tokenize(str).ToArray();
             var index = tokens.Length;

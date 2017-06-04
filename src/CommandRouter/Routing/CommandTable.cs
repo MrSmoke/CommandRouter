@@ -11,7 +11,12 @@
     using Results;
     using ParameterInfo = Binding.ParameterInfo;
 
-    public class CommandTable : IReadOnlyDictionary<string, CommandMethod>
+    public interface ICommandTable : IReadOnlyDictionary<string, CommandMethod>
+    {
+        void AddCommand(string command, Func<object[], CommandContext, ICommandResult> action);
+    }
+
+    public class CommandTable : ICommandTable
     {
         private readonly ICommandActivator _commandActivator;
         private readonly ApplicationManager _applicationManager;
@@ -25,6 +30,42 @@
 
             LoadCommands();
         }
+
+        public void AddCommand(string command, Func<object[], CommandContext, ICommandResult> action)
+        {
+            _methodTable.Add(command, new CommandMethod
+            {
+                Command = command,
+                Action = action,
+                Parameters = new List<ParameterInfo>()
+            });
+        }
+
+        public IEnumerator<KeyValuePair<string, CommandMethod>> GetEnumerator()
+        {
+            return _methodTable.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
+        public int Count => _methodTable.Count;
+        public bool ContainsKey(string key)
+        {
+            return _methodTable.ContainsKey(key);
+        }
+
+        public bool TryGetValue(string key, out CommandMethod value)
+        {
+            return _methodTable.TryGetValue(key, out value);
+        }
+
+        public CommandMethod this[string key] => _methodTable[key];
+
+        public IEnumerable<string> Keys => _methodTable.Keys;
+        public IEnumerable<CommandMethod> Values => _methodTable.Values;
 
         internal void LoadCommands()
         {
@@ -58,7 +99,13 @@
                             Command = cmdStr,
                             Action = action,
                             ReturnType = method.ReturnType,
-                            Parameters = method.GetParameters().Select(p => new ParameterInfo{Name = p.Name, Type = p.ParameterType}).ToList()
+                            Parameters = method.GetParameters().Select(p =>
+                            new ParameterInfo
+                            {
+                                Name = p.Name,
+                                Type = p.ParameterType,
+                                DefaultValue = p.DefaultValue
+                            }).ToList()
                         });
                     }
 
@@ -79,16 +126,6 @@
 
                 return methodInfo.Invoke(command, objs);
             };
-        }
-
-        public void AddCommand(string command, Func<object[], CommandContext, ICommandResult> action)
-        {
-            _methodTable.Add(command, new CommandMethod
-            {
-                Command = command,
-                Action = action,
-                Parameters = new List<ParameterInfo>()
-            });
         }
 
         private static IEnumerable<string> GetCommandStrings(CommandAttribute attribute, IEnumerable<CommandPrefixAttribute> prefixes)
@@ -131,31 +168,5 @@
 
             return pre + " " + cmd;
         }
-
-        public IEnumerator<KeyValuePair<string, CommandMethod>> GetEnumerator()
-        {
-            return _methodTable.GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        public int Count => _methodTable.Count;
-        public bool ContainsKey(string key)
-        {
-            return _methodTable.ContainsKey(key);
-        }
-
-        public bool TryGetValue(string key, out CommandMethod value)
-        {
-            return _methodTable.TryGetValue(key, out value);
-        }
-
-        public CommandMethod this[string key] => _methodTable[key];
-
-        public IEnumerable<string> Keys => _methodTable.Keys;
-        public IEnumerable<CommandMethod> Values => _methodTable.Values;
     }
 }
