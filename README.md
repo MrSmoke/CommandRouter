@@ -1,10 +1,16 @@
 # Command Router
+[![Build status](https://ci.appveyor.com/api/projects/status/w91d4ch2ekaffagd?svg=true)](https://ci.appveyor.com/project/MrSmoke/commandrouter)
 
 Simple package to help route certain commands to functions, similar to routing in ASP.
 
 
 ## Installation
 
+```PowerShell
+PM> Install-Package CommandRouter
+```
+
+Or for integration with MVC
 
 ```PowerShell
 PM> Install-Package CommandRouter.Integration.AspNetCore
