@@ -12,15 +12,27 @@
             var tokens = Tokenizer.Tokenize(str).ToArray();
             var index = tokens.Length;
 
-            while (index != 0)
+            //try default
+            if (tokens.Length == 0)
             {
-                if (commandTable.TryGetValue(string.Join(" ", tokens.Take(index)), out CommandMethod method))
+                if(commandTable.TryGetValue(str, out CommandMethod method))
                 {
-                    extra = tokens.Skip(index).ToArray();
+                    extra = new object[0];
                     return method;
                 }
+            }
+            else
+            {
+                while (index != 0)
+                {
+                    if (commandTable.TryGetValue(string.Join(" ", tokens.Take(index)), out CommandMethod method))
+                    {
+                        extra = tokens.Skip(index).ToArray();
+                        return method;
+                    }
 
-                --index;
+                    --index;
+                }
             }
 
             extra = null;
