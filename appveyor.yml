@@ -3,3 +3,8 @@ image: Visual Studio 2017
 install:
 - cmd: >-
     dotnet restore
+after_test:
+- cmd: dotnet pack src\CommandRouter\CommandRouter.csproj --configuration Release
+- cmd: dotnet pack src\CommandRouter.Integration.AspNetCore\CommandRouter.Integration.AspNetCore.csproj --configuration Release
+artifacts:
+- path: src\CommandRouter\bin\Release\CommandRouter.*.nupkg
