@@ -2,6 +2,8 @@
 {
     using System.Collections.Generic;
     using Converters;
+    using System;
+    using System.Reflection;
 
     internal class ParameterBinder
     {
@@ -25,13 +27,19 @@
             {
                 var pInfo = parameterInfos[i];
 
+                object value;
+                if (parameters.Length == 0 || i < parameters.Length)
+                    value = null;
+                else
+                    value = parameters[i];
+
                 if (i > parameters.Length)
                 {
                     boundParams[i] = null;
                     continue;
                 }
 
-                boundParams[i] = ConvertParameter(pInfo, parameters[i]);
+                boundParams[i] = ConvertParameter(pInfo, value);
             }
 
             return boundParams;
@@ -46,8 +54,20 @@
                 if (!converter.CanConvert(paramInfo.Type, value))
                     continue;
 
-                return converter.Convert(paramInfo.Type, value);
+                var convertedValue = converter.Convert(paramInfo.Type, value);
+
+                if (convertedValue == null || convertedValue.Equals(GetDefault(paramInfo.Type)))
+                    return paramInfo.DefaultValue;
             }
+
+            //No converters
+            return paramInfo.DefaultValue;
+        }
+
+        public object GetDefault(Type t)
+        {
+            if (t.GetTypeInfo().IsValueType)
+                return Activator.CreateInstance(t);
 
             return null;
         }
