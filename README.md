@@ -137,13 +137,13 @@ services.AddCommandRouter(options =>
 
 ```c#
 [Route("{command}")]
-public async Task Index(string command)
+public async Task<IActionResult> Index(string command)
 {
     var result = await _commandRunner.RunAsync(command, new Dictionary<string, object>
     {
         {"content", "Hello world!" }
     });
 
-    await result.ExecuteAsync(Response.Body);
+    return new CommandRouterResult(result);
 }
 ```
