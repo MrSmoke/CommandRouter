@@ -54,30 +54,22 @@
                 }
             }
 
-            try
+            var result = method.Action(parameters.ToArray(), context);
+
+            if (method.ReturnType == typeof(Task<ICommandResult>))
+                return await ((Task<ICommandResult>)result).ConfigureAwait(false);
+
+            if (method.ReturnType == typeof(ICommandResult))
+                return (ICommandResult)result;
+
+            if (method.ReturnType == typeof(Task))
             {
-                var result = method.Action(parameters.ToArray(), context);
-
-                if (method.ReturnType == typeof(Task<ICommandResult>))
-                    return await ((Task<ICommandResult>)result).ConfigureAwait(false);
-
-                if (method.ReturnType == typeof(ICommandResult))
-                    return (ICommandResult) result;
-
-                if (method.ReturnType == typeof(Task))
-                {
-                    await ((Task) result).ConfigureAwait(false);
-                    return new EmptyResult();
-                }
-
-                if (method.ReturnType == typeof(void))
-                    return new EmptyResult();
-
+                await ((Task)result).ConfigureAwait(false);
+                return new EmptyResult();
             }
-            catch
-            {
-                //fine
-            }
+
+            if (method.ReturnType == typeof(void))
+                return new EmptyResult();
 
             throw new CommandRouterException("Failed to run command");
         }
