@@ -9,3 +9,4 @@ after_test:
 artifacts:
 - path: src\CommandRouter\bin\Release\CommandRouter.*.nupkg
 - path: src\CommandRouter.Integration.AspNetCore\bin\Release\CommandRouter.Integration.AspNetCore.*.nupkg
+test: off 
