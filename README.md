@@ -132,6 +132,27 @@ services.AddCommandRouter(options =>
 });
 ```
 
+### Custom object activation
+
+If you are using some form of custom DI which doesn't add services into the default `IServiceProvider`, you can implement your own `ICommandActivator` and register it in the default `IServiceProvider`.
+
+```c#
+public class SimpleInjectorCommandActivator : ICommandActivator
+{
+    private readonly Container _container;
+
+    public SimpleInjectorCommandActivator(Container container)
+    {
+        _container = container;
+    }
+
+    public object Create(Type type)
+    {
+        return _container.GetInstance(type);
+    }
+}
+```
+
 ## Examples
 ### MVC
 
