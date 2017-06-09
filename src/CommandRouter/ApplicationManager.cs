@@ -9,5 +9,10 @@
         internal CommandFeatureProvider CommandFeatureProvider { get; set; }
 
         internal IList<Assembly> Assembiles = new List<Assembly>();
+
+        public void PopulateFeature(CommandFeature feature)
+        {
+            CommandFeatureProvider.PopulateFeature(Assembiles, feature);
+        }
     }
 }

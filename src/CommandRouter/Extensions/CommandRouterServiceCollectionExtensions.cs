@@ -75,7 +75,7 @@
             manager.CommandFeatureProvider = new CommandFeatureProvider();
 
             var commandFeature = new CommandFeature();
-            manager.CommandFeatureProvider.PopulateFeature(manager.Assembiles, commandFeature);
+            manager.PopulateFeature(commandFeature);
 
             //register command classes in DI
             foreach (var command in commandFeature.Commands)
