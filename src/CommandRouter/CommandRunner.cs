@@ -11,11 +11,11 @@
 
     internal class CommandRunner : ICommandRunner
     {
-        private readonly CommandTable _commandTable;
+        private readonly ICommandTable _commandTable;
         private readonly ICommandSelector _commandSelector;
         private readonly ParameterBinder _parameterBinder;
 
-        public CommandRunner(CommandTable commandTable, ICommandSelector commandSelector, ParameterBinder parameterBinder)
+        public CommandRunner(ICommandTable commandTable, ICommandSelector commandSelector, ParameterBinder parameterBinder)
         {
             _commandTable = commandTable;
             _commandSelector = commandSelector;

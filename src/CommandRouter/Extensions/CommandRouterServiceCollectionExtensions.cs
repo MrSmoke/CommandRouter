@@ -40,7 +40,7 @@
 
             RegisterCommands(services, manager);
 
-            services.AddSingleton<CommandTable>();
+            services.AddSingleton<ICommandTable, CommandTable>();
 
             services.AddSingleton<ICommandActivator, DefaultCommandActivator>();
 
