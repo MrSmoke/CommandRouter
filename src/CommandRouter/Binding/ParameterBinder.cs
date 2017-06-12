@@ -47,6 +47,9 @@
 
         private object ConvertParameter(ParameterInfo paramInfo, object value)
         {
+            if (value == null && paramInfo.HasDefaultValue)
+                return paramInfo.DefaultValue;
+
             for (var i = 0; i < _propertyConverters.Count; i++)
             {
                 var converter = _propertyConverters[i];
@@ -54,14 +57,14 @@
                 if (!converter.CanConvert(paramInfo.Type, value))
                     continue;
 
-                var convertedValue = converter.Convert(paramInfo.Type, value);
-
-                if (convertedValue == null || convertedValue.Equals(GetDefault(paramInfo.Type)))
-                    return paramInfo.DefaultValue;
+                return converter.Convert(paramInfo.Type, value);
             }
 
             //No converters
-            return paramInfo.DefaultValue;
+            if(paramInfo.HasDefaultValue)
+                return paramInfo.DefaultValue;
+
+            return null;
         }
 
         public object GetDefault(Type t)

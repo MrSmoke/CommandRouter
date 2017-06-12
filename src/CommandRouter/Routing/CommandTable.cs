@@ -104,7 +104,8 @@
                             {
                                 Name = p.Name,
                                 Type = p.ParameterType,
-                                DefaultValue = p.DefaultValue
+                                DefaultValue = p.DefaultValue,
+                                HasDefaultValue = p.HasDefaultValue
                             }).ToList()
                         });
                     }
