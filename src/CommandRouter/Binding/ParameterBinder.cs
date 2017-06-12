@@ -28,7 +28,7 @@
                 var pInfo = parameterInfos[i];
 
                 object value;
-                if (parameters.Length == 0 || i < parameters.Length)
+                if (parameters.Length == 0 || i >= parameters.Length)
                     value = null;
                 else
                     value = parameters[i];
