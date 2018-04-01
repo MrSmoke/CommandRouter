@@ -12,27 +12,27 @@
             var tokens = Tokenizer.Tokenize(str).ToArray();
             var index = tokens.Length;
 
-            //try default
-            if (tokens.Length == 0)
+            while (index > -1)
             {
-                if(commandTable.TryGetValue(str, out var method))
+                //get the command string
+                string cmd;
+                if (index == 0)
                 {
-                    extra = new object[0];
+                    //check the root/default route
+                    cmd = "";
+                }
+                else
+                {
+                    cmd = string.Join(" ", tokens.Take(index));
+                }
+
+                if (commandTable.TryGetValue(cmd, out var method))
+                {
+                    extra = tokens.Skip(index).ToArray();
                     return method;
                 }
-            }
-            else
-            {
-                while (index != 0)
-                {
-                    if (commandTable.TryGetValue(string.Join(" ", tokens.Take(index)), out CommandMethod method))
-                    {
-                        extra = tokens.Skip(index).ToArray();
-                        return method;
-                    }
 
-                    --index;
-                }
+                --index;
             }
 
             extra = null;

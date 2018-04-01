@@ -1,5 +1,7 @@
 ﻿namespace CommandRouter.Tests
 {
+    using System.Collections.Generic;
+    using CommandRouter.Binding;
     using Routing;
     using Moq;
     using Xunit;
@@ -22,6 +24,42 @@
             Assert.NotNull(selectedMethod);
             Assert.Equal(selectedMethod.Id, commandMethod.Id);
             Assert.Empty(extra);
+        }
+
+        [Fact]
+        public void SelectCommand_RootRouteWithParameter_ReturnsMethod()
+        {
+            var commandMethod = new CommandMethod
+            {
+                Parameters = new List<ParameterInfo> {
+                    new ParameterInfo
+                    {
+                        HasDefaultValue = false,
+                        Name = "param1",
+                        Type = typeof(string)
+                    }
+                }
+            };
+
+            var commandTable = new Mock<ICommandTable>();
+            commandTable.Setup(c => c.TryGetValue("", out commandMethod)).Returns(true);
+
+            var commandSelector = new DefaultCommandSelector();
+
+            var selectedMethod = commandSelector.SelectCommand("bacon", commandTable.Object, out object[] extra);
+
+            Assert.NotNull(selectedMethod);
+            Assert.Equal(selectedMethod.Id, commandMethod.Id);
+            Assert.Single(extra);
+            Assert.Equal("bacon", extra[0]);
+        }
+
+        public class TestClass
+        {
+            public void TestMethod(string param1)
+            {
+
+            }
         }
     }
 }
