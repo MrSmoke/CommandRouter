@@ -4,7 +4,7 @@
     <PackageId>CommandRouter.Integration.AspNetCore</PackageId>
     <Title>CommandRouter AspNetCore Integration</Title>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
-    <VersionPrefix>1.0.0-beta2</VersionPrefix>
+    <VersionPrefix>1.0.0-beta3</VersionPrefix>
 
     <PackageProjectUrl>https://github.com/MrSmoke/CommandRouter</PackageProjectUrl>
     <RepositoryUrl>https://github.com/MrSmoke/CommandRouter.git</RepositoryUrl>
