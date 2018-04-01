@@ -3,17 +3,16 @@
   <PropertyGroup>
     <PackageId>CommandRouter</PackageId>
     <Title>CommandRouter</Title>
-    <TargetFramework>netstandard1.6</TargetFramework>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <VersionPrefix>1.0.0-beta4</VersionPrefix>
-    <TargetFrameworks>net451;netstandard1.6</TargetFrameworks>
 
     <PackageProjectUrl>https://github.com/MrSmoke/CommandRouter</PackageProjectUrl>
     <RepositoryUrl>https://github.com/MrSmoke/CommandRouter.git</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="microsoft.extensions.dependencyinjection" Version="1.1.1" />
-    <PackageReference Include="microsoft.extensions.dependencymodel" Version="1.1.2" />
+    <PackageReference Include="microsoft.extensions.dependencyinjection" Version="2.0.0" />
+    <PackageReference Include="microsoft.extensions.dependencymodel" Version="2.0.4" />
   </ItemGroup>
 
 </Project>

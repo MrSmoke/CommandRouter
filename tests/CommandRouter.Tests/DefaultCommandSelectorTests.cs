@@ -1,6 +1,6 @@
 ﻿namespace CommandRouter.Tests
 {
-    using CommandRouter.Routing;
+    using Routing;
     using Moq;
     using Xunit;
 
@@ -9,7 +9,7 @@
         [Fact]
         public void SelectCommand_EmptyString_ReturnsMethod()
         {
-            CommandMethod commandMethod = new CommandMethod();
+            var commandMethod = new CommandMethod();
 
             var commandTable = new Mock<ICommandTable>();
             commandTable.Setup(c => c.TryGetValue("", out commandMethod)).Returns(true);

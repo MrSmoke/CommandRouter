@@ -1,10 +1,9 @@
 ﻿namespace CommandRouter.Tests.Binding
 {
     using System.Collections.Generic;
-    using System.Reflection;
     using Moq;
     using Xunit;
-    using CommandRouter.Converters;
+    using Converters;
     using CommandRouter.Binding;
 
     public class ParameterBinderTests
@@ -12,9 +11,9 @@
         [Fact]
         public void BindParameters_DefaultParameters()
         {
-            var parameterInfos = new List<CommandRouter.Binding.ParameterInfo>
+            var parameterInfos = new List<ParameterInfo>
             {
-                new CommandRouter.Binding.ParameterInfo
+                new ParameterInfo
                 {
                     Name = "param",
                     Type = typeof(string),
@@ -27,10 +26,10 @@
 
             var binder = new ParameterBinder(new List<IPropertyConverter> {mockBinder.Object});
 
-            IList<object> objs = binder.BindParameters(parameterInfos, new object[0]);
+            var objs = binder.BindParameters(parameterInfos, new object[0]);
 
             Assert.NotEmpty(objs);
-            Assert.Equal(objs[0], "123");
+            Assert.Equal("123", objs[0]);
         }
     }
 }

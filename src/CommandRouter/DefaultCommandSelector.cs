@@ -15,7 +15,7 @@
             //try default
             if (tokens.Length == 0)
             {
-                if(commandTable.TryGetValue(str, out CommandMethod method))
+                if(commandTable.TryGetValue(str, out var method))
                 {
                     extra = new object[0];
                     return method;

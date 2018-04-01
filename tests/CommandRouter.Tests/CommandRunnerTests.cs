@@ -2,8 +2,8 @@
 {
     using System.Threading.Tasks;
     using Moq;
-    using CommandRouter.Routing;
-    using CommandRouter.Converters;
+    using Routing;
+    using Converters;
     using Xunit;
     using System;
     using System.Collections.Generic;
@@ -13,11 +13,9 @@
         [Fact]
         public async Task RunAsync_HandlesExceptions()
         {
-            CommandMethod commandMethod = new CommandMethod
+            var commandMethod = new CommandMethod
             {
-                Action = (i, ii) => {
-                    return Task.FromException(new TestException());
-                },
+                Action = (i, ii) => Task.FromException(new TestException()),
                 ReturnType = typeof(Task)
             };
 
@@ -33,8 +31,7 @@
             var commandRunner = new CommandRunner(commandTable.Object, commandSelector.Object, pBinder);
 
             await Assert.ThrowsAsync<TestException>(async () =>
-                await commandRunner.RunAsync("test"));
-
+                await commandRunner.RunAsync("test").ConfigureAwait(false)).ConfigureAwait(false);
         }
 
         private class TestException : Exception

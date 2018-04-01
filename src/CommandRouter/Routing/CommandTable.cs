@@ -118,9 +118,7 @@
         {
             return (objs, context) =>
             {
-                var command = _commandActivator.Create(classType) as Command;
-
-                if (command == null)
+                if (!(_commandActivator.Create(classType) is Command command))
                     throw new Exception("Oh o");
 
                 command.Context = context;
