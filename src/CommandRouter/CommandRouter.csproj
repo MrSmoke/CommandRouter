@@ -4,7 +4,7 @@
     <PackageId>CommandRouter</PackageId>
     <Title>CommandRouter</Title>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
-    <VersionPrefix>1.0.0-beta5</VersionPrefix>
+    <VersionPrefix>1.0.0-beta6</VersionPrefix>
 
     <PackageProjectUrl>https://github.com/MrSmoke/CommandRouter</PackageProjectUrl>
     <RepositoryUrl>https://github.com/MrSmoke/CommandRouter.git</RepositoryUrl>
