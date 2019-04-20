@@ -5,30 +5,29 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
+    using System.Runtime.CompilerServices;
+    using System.Threading.Tasks;
     using Activation;
     using Attributes;
     using Commands;
     using Results;
     using ParameterInfo = Binding.ParameterInfo;
 
-    public interface ICommandTable : IReadOnlyDictionary<string, CommandMethod>
-    {
-        void AddCommand(string command, Func<object[], CommandContext, ICommandResult> action);
-    }
-
     public class CommandTable : ICommandTable
     {
         private readonly ICommandActivator _commandActivator;
-        private readonly ApplicationManager _applicationManager;
 
         private readonly Dictionary<string, CommandMethod> _methodTable = new Dictionary<string, CommandMethod>();
 
-        public CommandTable(ICommandActivator commandActivator, ApplicationManager applicationManager)
+        public CommandTable(ICommandActivator commandActivator)
         {
             _commandActivator = commandActivator;
-            _applicationManager = applicationManager;
+        }
 
-            LoadCommands();
+        public CommandTable(ICommandActivator commandActivator, ApplicationManager applicationManager) :
+            this(commandActivator)
+        {
+            LoadCommands(applicationManager);
         }
 
         public void AddCommand(string command, Func<object[], CommandContext, ICommandResult> action)
@@ -39,6 +38,11 @@
                 Action = action,
                 Parameters = new List<ParameterInfo>()
             });
+        }
+
+        public void RegisterCommands<T>() where T : Command
+        {
+            LoadCommands(typeof(T));
         }
 
         public IEnumerator<KeyValuePair<string, CommandMethod>> GetEnumerator()
@@ -67,10 +71,10 @@
         public IEnumerable<string> Keys => _methodTable.Keys;
         public IEnumerable<CommandMethod> Values => _methodTable.Values;
 
-        internal void LoadCommands()
+        internal void LoadCommands(ApplicationManager applicationManager)
         {
             var commandFeature = new CommandFeature();
-            _applicationManager.CommandFeatureProvider.PopulateFeature(_applicationManager.Assembiles, commandFeature);
+            applicationManager.CommandFeatureProvider.PopulateFeature(applicationManager.Assembiles, commandFeature);
 
             foreach(var type in commandFeature.Commands)
                 LoadCommands(type.AsType());
@@ -109,7 +113,6 @@
                             }).ToList()
                         });
                     }
-
                 }
             }
         }
@@ -118,37 +121,49 @@
         {
             return (objs, context) =>
             {
-                if (!(_commandActivator.Create(classType) is Command command))
-                    throw new Exception("Oh o");
+                var scope = _commandActivator.CreateScope();
+                object result = null;
 
-                command.Context = context;
+                try
+                {
+                    if (!(scope.CommandActivator.Create(classType) is Command command))
+                        throw new Exception("Oh o");
 
-                return methodInfo.Invoke(command, objs);
+                    command.Context = context;
+
+                    result = methodInfo.Invoke(command, objs);
+
+                    return result;
+                }
+                finally
+                {
+                    // Dispose of our scope
+                    if (result is Task task)
+                        task.ContinueWith(_ => { scope.Dispose(); });
+                    else
+                        scope.Dispose();
+                }
             };
         }
 
-        private static IEnumerable<string> GetCommandStrings(CommandAttribute attribute, IEnumerable<CommandPrefixAttribute> prefixes)
+        private static IEnumerable<string> GetCommandStrings(CommandAttribute attribute, ICollection<CommandPrefixAttribute> prefixes)
         {
-            var cmds = new List<string>();
-
             //TODO: Cleanup
             if (!prefixes.Any())
             {
                 var cmd = Parse(attribute, null);
                 if (cmd != null)
-                    cmds.Add(cmd.Trim());
-
-                return cmds;
+                    yield return cmd.Trim();
             }
-
-            foreach (var prefix in prefixes)
+            else
             {
-                var cmd = Parse(attribute, prefix);
-                if (cmd != null)
-                    cmds.Add(cmd.Trim());
+                foreach (var prefix in prefixes)
+                {
+                    var cmd = Parse(attribute, prefix);
+                    if (cmd != null)
+                        yield return cmd.Trim();
+                }
             }
-
-            return cmds;
         }
 
         private static string Parse(CommandAttribute attribute, CommandPrefixAttribute prefix)

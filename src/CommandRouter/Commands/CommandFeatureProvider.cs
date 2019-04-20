@@ -18,7 +18,7 @@
             }
         }
 
-        private static bool IsCommand(TypeInfo typeInfo)
+        private static bool IsCommand(Type typeInfo)
         {
             if (!typeInfo.IsClass)
                 return false;

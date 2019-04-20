@@ -7,6 +7,12 @@
     using Xunit;
     using System;
     using System.Collections.Generic;
+    using Activation;
+    using Attributes;
+    using CommandRouter.Binding;
+    using Commands;
+    using Microsoft.Extensions.DependencyInjection;
+    using Results;
 
     public class CommandRunnerTests
     {
@@ -33,6 +39,64 @@
             await Assert.ThrowsAsync<TestException>(async () =>
                 await commandRunner.RunAsync("test").ConfigureAwait(false)).ConfigureAwait(false);
         }
+
+        [Fact]
+        public async Task RunAsync_CanResolveScopedServices()
+        {
+            var services = new ServiceCollection();
+
+            services.AddScoped<DisposableService>();
+            services.AddTransient<TestCommand>();
+
+            var activator = new DefaultCommandActivator(services.BuildServiceProvider());
+
+            var commandTable = new CommandTable(activator);
+
+            commandTable.RegisterCommands<TestCommand>();
+
+            var runner = new CommandRunner(commandTable, new DefaultCommandSelector(),
+                new ParameterBinder(new List<IPropertyConverter>()));
+
+            // Test sync
+            await runner.RunAsync("test");
+
+            // Test await async
+            await runner.RunAsync("test-async");
+        }
+
+        private class DisposableService : IDisposable
+        {
+            public Action OnDispose { get; set; }
+
+            public void Dispose()
+            {
+                OnDispose?.Invoke();
+            }
+        }
+
+        private class TestCommand : Command
+        {
+            private readonly DisposableService _disposableService;
+
+            public TestCommand(DisposableService disposableService)
+            {
+                _disposableService = disposableService;
+            }
+
+            [Command("test")]
+            public void Hello()
+            {
+            }
+
+            [Command("test-async")]
+            public async Task<ICommandResult> HelloAsync()
+            {
+                await Task.Delay(1000);
+
+                return new StringResult("hello");
+            }
+        }
+
 
         private class TestException : Exception
         {

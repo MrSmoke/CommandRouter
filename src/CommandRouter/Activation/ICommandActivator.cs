@@ -5,5 +5,6 @@
     public interface ICommandActivator
     {
         object Create(Type type);
+        ICommandActivatorScope CreateScope();
     }
 }
