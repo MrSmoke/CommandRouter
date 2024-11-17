@@ -1,6 +1,8 @@
 ﻿namespace CommandRouter.Binding
 {
+    using System;
     using System.Collections.Generic;
+    using System.Reflection;
     using Converters;
 
     internal class ParameterBinder
@@ -45,8 +47,18 @@
 
         private object? ConvertParameter(ParameterInfo paramInfo, object? value)
         {
-            if (value == null && paramInfo.HasDefaultValue)
-                return paramInfo.DefaultValue;
+            // Nullable support
+            if (value is null)
+            {
+                // When the value is null and we have a default value, use that
+                if (paramInfo.HasDefaultValue)
+                    return paramInfo.DefaultValue;
+
+                // If we don't have a default value, check if we are allowed to be nullable
+                // If not, throw
+                if (!paramInfo.IsNullable)
+                    throw new ArgumentNullException(paramInfo.Name);
+            }
 
             for (var i = 0; i < _propertyConverters.Count; i++)
             {

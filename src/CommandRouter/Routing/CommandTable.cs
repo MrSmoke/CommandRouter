@@ -1,4 +1,4 @@
-﻿namespace CommandRouter.Routing
+namespace CommandRouter.Routing
 {
     using System;
     using System.Collections;
@@ -17,13 +17,14 @@
     {
         private readonly ICommandActivator _commandActivator;
         private readonly Dictionary<string, CommandMethod> _methodTable = new();
+        private readonly NullabilityInfoContext _nullabilityContext = new();
 
         public CommandTable(ICommandActivator commandActivator)
         {
             _commandActivator = commandActivator;
         }
 
-        internal CommandTable(ICommandActivator commandActivator, ApplicationManager applicationManager) :
+        public CommandTable(ICommandActivator commandActivator, ApplicationManager applicationManager) :
             this(commandActivator)
         {
             LoadCommands(applicationManager);
@@ -95,12 +96,20 @@
                         _methodTable.Add(cmdStr, new CommandMethod(
                             command: cmdStr,
                             action: action,
-                            parameters: method.GetParameters().Select(p => new ParameterInfo
+                            parameters: method.GetParameters().Select(p =>
                             {
-                                Name = p.Name,
-                                Type = p.ParameterType,
-                                DefaultValue = p.DefaultValue,
-                                HasDefaultValue = p.HasDefaultValue
+                                var nullableInfo = _nullabilityContext.Create(p);
+
+                                return new ParameterInfo
+                                {
+                                    Name = p.Name,
+                                    Type = p.ParameterType,
+                                    DefaultValue = p.DefaultValue,
+                                    HasDefaultValue = p.HasDefaultValue,
+                                    IsNullable = nullableInfo.WriteState
+                                        is NullabilityState.Nullable
+                                        or NullabilityState.Unknown
+                                };
                             }).ToArray()
                         ));
                     }

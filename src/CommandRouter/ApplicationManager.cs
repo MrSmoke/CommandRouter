@@ -4,7 +4,7 @@
     using System.Reflection;
     using Commands;
 
-    internal class ApplicationManager
+    public class ApplicationManager
     {
         internal readonly IList<Assembly> Assemblies = new List<Assembly>();
 

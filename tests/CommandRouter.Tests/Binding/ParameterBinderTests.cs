@@ -18,7 +18,8 @@
                     Name = "param",
                     Type = typeof(string),
                     DefaultValue = "123",
-                    HasDefaultValue = true
+                    HasDefaultValue = true,
+                    IsNullable = false
                 }
             ];
 
