@@ -3,7 +3,7 @@
   <PropertyGroup>
     <PackageId>CommandRouter</PackageId>
     <Title>CommandRouter</Title>
-    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <TargetFramework>net8.0</TargetFramework>
     <VersionPrefix>1.0.0-beta6</VersionPrefix>
 
     <PackageProjectUrl>https://github.com/MrSmoke/CommandRouter</PackageProjectUrl>
@@ -11,8 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="microsoft.extensions.dependencyinjection" Version="2.0.0" />
-    <PackageReference Include="microsoft.extensions.dependencymodel" Version="2.0.4" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="8.0.2" />
   </ItemGroup>
 
 </Project>

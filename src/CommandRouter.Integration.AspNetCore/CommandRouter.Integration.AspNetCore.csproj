@@ -3,7 +3,7 @@
   <PropertyGroup>
     <PackageId>CommandRouter.Integration.AspNetCore</PackageId>
     <Title>CommandRouter AspNetCore Integration</Title>
-    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <TargetFramework>net8.0</TargetFramework>
     <VersionPrefix>1.0.0-beta3</VersionPrefix>
 
     <PackageProjectUrl>https://github.com/MrSmoke/CommandRouter</PackageProjectUrl>
@@ -11,8 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Hosting.Abstractions" Version="2.0.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Abstractions" Version="2.0.3" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>

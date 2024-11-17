@@ -32,12 +32,11 @@
             var commandSelector = new Mock<ICommandSelector>();
             commandSelector.Setup(c => c.SelectCommand("test", commandTable.Object, out outExtra)).Returns(commandMethod);
 
-            var pBinder = new CommandRouter.Binding.ParameterBinder(new List<IPropertyConverter>());
+            var pBinder = new ParameterBinder(new List<IPropertyConverter>());
 
             var commandRunner = new CommandRunner(commandTable.Object, commandSelector.Object, pBinder);
 
-            await Assert.ThrowsAsync<TestException>(async () =>
-                await commandRunner.RunAsync("test").ConfigureAwait(false)).ConfigureAwait(false);
+            await Assert.ThrowsAsync<TestException>(async () => await commandRunner.RunAsync("test"));
         }
 
         [Fact]
@@ -76,13 +75,6 @@
 
         private class TestCommand : Command
         {
-            private readonly DisposableService _disposableService;
-
-            public TestCommand(DisposableService disposableService)
-            {
-                _disposableService = disposableService;
-            }
-
             [Command("test")]
             public void Hello()
             {

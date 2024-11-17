@@ -53,13 +53,5 @@
             Assert.Single(extra);
             Assert.Equal("bacon", extra[0]);
         }
-
-        public class TestClass
-        {
-            public void TestMethod(string param1)
-            {
-
-            }
-        }
     }
 }
