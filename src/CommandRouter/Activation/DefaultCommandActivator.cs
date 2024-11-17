@@ -12,7 +12,7 @@
             _serviceProvider = serviceProvider;
         }
 
-        public object Create(Type type)
+        public object? Create(Type type)
         {
             return _serviceProvider.GetService(type);
         }

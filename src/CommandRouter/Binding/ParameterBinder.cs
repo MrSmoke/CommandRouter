@@ -2,8 +2,6 @@
 {
     using System.Collections.Generic;
     using Converters;
-    using System;
-    using System.Reflection;
 
     internal class ParameterBinder
     {
@@ -19,15 +17,15 @@
             _propertyConverters.Add(propertyConverter);
         }
 
-        internal IList<object> BindParameters(IList<ParameterInfo> parameterInfos, object[] parameters)
+        internal object?[] BindParameters(ParameterInfo[] parameterInfos, object[] parameters)
         {
-            var boundParams = new object[parameterInfos.Count];
+            var boundParams = new object?[parameterInfos.Length];
 
-            for (var i = 0; i < parameterInfos.Count; i++)
+            for (var i = 0; i < parameterInfos.Length; i++)
             {
                 var pInfo = parameterInfos[i];
 
-                object value;
+                object? value;
                 if (parameters.Length == 0 || i >= parameters.Length)
                     value = null;
                 else
@@ -45,7 +43,7 @@
             return boundParams;
         }
 
-        private object ConvertParameter(ParameterInfo paramInfo, object value)
+        private object? ConvertParameter(ParameterInfo paramInfo, object? value)
         {
             if (value == null && paramInfo.HasDefaultValue)
                 return paramInfo.DefaultValue;
@@ -54,6 +52,9 @@
             {
                 var converter = _propertyConverters[i];
 
+                if (value is null)
+                    continue;
+
                 if (!converter.CanConvert(paramInfo.Type, value))
                     continue;
 
@@ -61,18 +62,7 @@
             }
 
             //No converters
-            if(paramInfo.HasDefaultValue)
-                return paramInfo.DefaultValue;
-
-            return null;
-        }
-
-        public object GetDefault(Type t)
-        {
-            if (t.GetTypeInfo().IsValueType)
-                return Activator.CreateInstance(t);
-
-            return null;
+            return paramInfo.HasDefaultValue ? paramInfo.DefaultValue : null;
         }
     }
 }

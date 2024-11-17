@@ -6,6 +6,6 @@ namespace CommandRouter.Routing
 
     public interface ICommandTable : IReadOnlyDictionary<string, CommandMethod>
     {
-        void AddCommand(string command, Func<object[], CommandContext, ICommandResult> action);
+        void AddCommand(string command, Func<object?[], CommandContext, ICommandResult> action);
     }
 }

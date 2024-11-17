@@ -27,17 +27,14 @@
             return RunAsync(command, null);
         }
 
-        public async Task<ICommandResult> RunAsync(string command, Dictionary<string, object> contextItems)
+        public async Task<ICommandResult> RunAsync(string command, Dictionary<string, object>? contextItems)
         {
-            if (command == null)
-                throw new ArgumentNullException(nameof(command));
+            ArgumentNullException.ThrowIfNull(command);
 
-            var method = GetMethod(command, out object[] args);
-
-            if (method == null)
+            if (!_commandSelector.TrySelectCommand(command, _commandTable, out var method, out var args))
                 throw new CommandNotFoundException(command);
 
-            var parameters = GetParameters(method, args);
+            var parameters = _parameterBinder.BindParameters(method.Parameters, args);
 
             var context = new CommandContext
             {
@@ -54,34 +51,22 @@
                 }
             }
 
-            var result = method.Action(parameters.ToArray(), context);
+            var result = method.Action(parameters, context);
 
-            if (method.ReturnType == typeof(Task<ICommandResult>))
-                return await ((Task<ICommandResult>)result).ConfigureAwait(false);
-
-            if (method.ReturnType == typeof(ICommandResult))
-                return (ICommandResult)result;
-
-            if (method.ReturnType == typeof(Task))
+            switch (result)
             {
-                await ((Task)result).ConfigureAwait(false);
-                return new EmptyResult();
+                case ICommandResult commandResult:
+                    return commandResult;
+                case Task<ICommandResult> taskCommandResult:
+                    return await taskCommandResult.ConfigureAwait(false);
+                case Task taskResult:
+                    await taskResult;
+                    return EmptyResult.Empty;
+                case null:
+                    return EmptyResult.Empty;
+                default:
+                    throw new CommandRouterException("Failed to run command");
             }
-
-            if (method.ReturnType == typeof(void))
-                return new EmptyResult();
-
-            throw new CommandRouterException("Failed to run command");
-        }
-
-        private CommandMethod GetMethod(string command, out object[] args)
-        {
-            return _commandSelector.SelectCommand(command, _commandTable, out args);
-        }
-
-        private IEnumerable<object> GetParameters(CommandMethod method, object[] arguments)
-        {
-            return _parameterBinder.BindParameters(method.Parameters, arguments);
         }
     }
 }

@@ -19,24 +19,24 @@
         [Fact]
         public async Task RunAsync_HandlesExceptions()
         {
-            var commandMethod = new CommandMethod
-            {
-                Action = (i, ii) => Task.FromException(new TestException()),
-                ReturnType = typeof(Task)
-            };
+            var commandMethod = new CommandMethod(
+                command: "test",
+                action: (_, _) => Task.FromException(new TestException()),
+                parameters: []
+            );
 
-            var commandTable = new Mock<ICommandTable>();
+            var commandTable = new Mock<ICommandTable>(MockBehavior.Strict);
             commandTable.Setup(c => c.TryGetValue("test", out commandMethod)).Returns(true);
 
-            object[] outExtra = new object[0];
-            var commandSelector = new Mock<ICommandSelector>();
-            commandSelector.Setup(c => c.SelectCommand("test", commandTable.Object, out outExtra)).Returns(commandMethod);
+            object[]? outExtra = null;
+            var commandSelector = new Mock<ICommandSelector>(MockBehavior.Strict);
+            commandSelector.Setup(c => c.TrySelectCommand("test", commandTable.Object, out commandMethod, out outExtra)).Returns(true);
 
-            var pBinder = new ParameterBinder(new List<IPropertyConverter>());
+            var pBinder = new ParameterBinder([]);
 
             var commandRunner = new CommandRunner(commandTable.Object, commandSelector.Object, pBinder);
 
-            await Assert.ThrowsAsync<TestException>(async () => await commandRunner.RunAsync("test"));
+            await Assert.ThrowsAsync<TestException>(() => commandRunner.RunAsync("test"));
         }
 
         [Fact]
@@ -65,7 +65,7 @@
 
         private class DisposableService : IDisposable
         {
-            public Action OnDispose { get; set; }
+            public Action? OnDispose { get; set; }
 
             public void Dispose()
             {
@@ -73,6 +73,7 @@
             }
         }
 
+#pragma warning disable CA1822
         private class TestCommand : Command
         {
             [Command("test")]
@@ -88,11 +89,8 @@
                 return new StringResult("hello");
             }
         }
+#pragma warning restore CA1822
 
-
-        private class TestException : Exception
-        {
-
-        }
+        private class TestException : Exception;
     }
 }

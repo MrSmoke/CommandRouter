@@ -14,7 +14,7 @@ namespace CommandRouter.Activation
 
         public ICommandActivator CommandActivator => this;
 
-        public object Create(Type type)
+        public object? Create(Type type)
         {
             return _serviceScope.ServiceProvider.GetService(type);
         }
@@ -26,6 +26,7 @@ namespace CommandRouter.Activation
 
         public void Dispose()
         {
+            GC.SuppressFinalize(this);
             _serviceScope.Dispose();
         }
     }

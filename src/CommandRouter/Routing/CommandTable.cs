@@ -3,9 +3,9 @@
     using System;
     using System.Collections;
     using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using System.Reflection;
-    using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
     using Activation;
     using Attributes;
@@ -16,28 +16,22 @@
     public class CommandTable : ICommandTable
     {
         private readonly ICommandActivator _commandActivator;
-
-        private readonly Dictionary<string, CommandMethod> _methodTable = new Dictionary<string, CommandMethod>();
+        private readonly Dictionary<string, CommandMethod> _methodTable = new();
 
         public CommandTable(ICommandActivator commandActivator)
         {
             _commandActivator = commandActivator;
         }
 
-        public CommandTable(ICommandActivator commandActivator, ApplicationManager applicationManager) :
+        internal CommandTable(ICommandActivator commandActivator, ApplicationManager applicationManager) :
             this(commandActivator)
         {
             LoadCommands(applicationManager);
         }
 
-        public void AddCommand(string command, Func<object[], CommandContext, ICommandResult> action)
+        public void AddCommand(string command, Func<object?[], CommandContext, ICommandResult> action)
         {
-            _methodTable.Add(command, new CommandMethod
-            {
-                Command = command,
-                Action = action,
-                Parameters = new List<ParameterInfo>()
-            });
+            _methodTable.Add(command, new CommandMethod(command, action, []));
         }
 
         public void RegisterCommands<T>() where T : Command
@@ -61,7 +55,7 @@
             return _methodTable.ContainsKey(key);
         }
 
-        public bool TryGetValue(string key, out CommandMethod value)
+        public bool TryGetValue(string key, [NotNullWhen(true)] out CommandMethod? value)
         {
             return _methodTable.TryGetValue(key, out value);
         }
@@ -74,7 +68,7 @@
         internal void LoadCommands(ApplicationManager applicationManager)
         {
             var commandFeature = new CommandFeature();
-            applicationManager.CommandFeatureProvider.PopulateFeature(applicationManager.Assembiles, commandFeature);
+            DefaultCommandFeatureProvider.PopulateFeature(applicationManager.Assemblies, commandFeature);
 
             foreach(var type in commandFeature.Commands)
                 LoadCommands(type.AsType());
@@ -85,7 +79,7 @@
             var typeInfo = type.GetTypeInfo();
 
             var methods = typeInfo.GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance);
-            var prefixes = typeInfo.GetCustomAttributes<CommandPrefixAttribute>().ToList();
+            var prefixes = typeInfo.GetCustomAttributes<CommandPrefixAttribute>().ToArray();
 
             foreach (var method in methods)
             {
@@ -98,35 +92,32 @@
                         if (_methodTable.ContainsKey(cmdStr))
                             throw new Exception($"Command '{cmdStr}' has already been registered");
 
-                        _methodTable.Add(cmdStr, new CommandMethod
-                        {
-                            Command = cmdStr,
-                            Action = action,
-                            ReturnType = method.ReturnType,
-                            Parameters = method.GetParameters().Select(p =>
-                            new ParameterInfo
+                        _methodTable.Add(cmdStr, new CommandMethod(
+                            command: cmdStr,
+                            action: action,
+                            parameters: method.GetParameters().Select(p => new ParameterInfo
                             {
                                 Name = p.Name,
                                 Type = p.ParameterType,
                                 DefaultValue = p.DefaultValue,
                                 HasDefaultValue = p.HasDefaultValue
-                            }).ToList()
-                        });
+                            }).ToArray()
+                        ));
                     }
                 }
             }
         }
 
-        private Func<object[], CommandContext, object> MethodInvoker(Type classType, MethodBase methodInfo)
+        private Func<object?[], CommandContext, object?> MethodInvoker(Type classType, MethodBase methodInfo)
         {
             return (objs, context) =>
             {
                 var scope = _commandActivator.CreateScope();
-                object result = null;
+                object? result = null;
 
                 try
                 {
-                    if (!(scope.CommandActivator.Create(classType) is Command command))
+                    if (scope.CommandActivator.Create(classType) is not Command command)
                         throw new Exception("Oh o");
 
                     command.Context = context;
@@ -146,10 +137,10 @@
             };
         }
 
-        private static IEnumerable<string> GetCommandStrings(CommandAttribute attribute, ICollection<CommandPrefixAttribute> prefixes)
+        private static IEnumerable<string> GetCommandStrings(CommandAttribute attribute, CommandPrefixAttribute[] prefixes)
         {
             //TODO: Cleanup
-            if (!prefixes.Any())
+            if (prefixes.Length == 0)
             {
                 var cmd = Parse(attribute, null);
                 if (cmd != null)
@@ -166,7 +157,7 @@
             }
         }
 
-        private static string Parse(CommandAttribute attribute, CommandPrefixAttribute prefix)
+        private static string? Parse(CommandAttribute attribute, CommandPrefixAttribute? prefix)
         {
             var cmd = attribute?.Command;
             var pre = prefix?.Command;

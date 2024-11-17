@@ -1,16 +1,19 @@
 ﻿namespace CommandRouter
 {
     using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using System.Text.RegularExpressions;
     using Routing;
 
-    internal class DefaultCommandSelector : ICommandSelector
+    internal partial class DefaultCommandSelector : ICommandSelector
     {
-        public CommandMethod SelectCommand(string str, ICommandTable commandTable, out object[] extra)
+        public bool TrySelectCommand(string str, ICommandTable commandTable,
+            [NotNullWhen(true)] out CommandMethod? method,
+            [NotNullWhen(true)] out object[]? extra)
         {
-            var tokens = Tokenizer.Tokenize(str).ToArray();
-            var index = tokens.Length;
+            var tokens = Tokenizer.Tokenize(str);
+            var index = tokens.Count;
 
             while (index > -1)
             {
@@ -26,22 +29,23 @@
                     cmd = string.Join(" ", tokens.Take(index));
                 }
 
-                if (commandTable.TryGetValue(cmd, out var method))
+                if (commandTable.TryGetValue(cmd, out method))
                 {
                     extra = tokens.Skip(index).ToArray();
-                    return method;
+                    return true;
                 }
 
                 --index;
             }
 
+            method = null;
             extra = null;
-            return null;
+            return false;
         }
 
-        private static class Tokenizer
+        private static partial class Tokenizer
         {
-            public static IEnumerable<string> Tokenize(string command)
+            public static List<string> Tokenize(string command)
             {
                 command = command.Trim();
                 var tokens = new List<string>();
@@ -69,8 +73,7 @@
 
             private static string GetNextWord(string command, ref int index)
             {
-                const string regexPattern = "( |\")";
-                var match = Regex.Match(command.Substring(index), regexPattern);
+                var match = TokenizerRegex().Match(command[index..]);
 
                 var delimitersIndex = match.Success ? match.Index + index : -1;
 
@@ -78,7 +81,7 @@
 
                 if (delimitersIndex == -1)
                 {
-                    retVal = command.Substring(index, command.Length - index);
+                    retVal = command[index..];
                     index = command.Length;
                     return retVal;
                 }
@@ -118,6 +121,9 @@
                     ++index;
                 }
             }
+
+            [GeneratedRegex("( |\")")]
+            private static partial Regex TokenizerRegex();
         }
     }
 }

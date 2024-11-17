@@ -4,9 +4,9 @@
     using System.Collections.Generic;
     using System.Reflection;
 
-    public class CommandFeatureProvider
+    internal static class DefaultCommandFeatureProvider
     {
-        public void PopulateFeature(IEnumerable<Assembly> assemblies, CommandFeature commandFeature)
+        public static void PopulateFeature(IEnumerable<Assembly> assemblies, CommandFeature commandFeature)
         {
             foreach (var assembly in assemblies)
             {

@@ -1,9 +1,12 @@
 ﻿namespace CommandRouter
 {
+    using System.Diagnostics.CodeAnalysis;
     using Routing;
 
     public interface ICommandSelector
     {
-        CommandMethod SelectCommand(string str, ICommandTable commandTable, out object[] extra);
+        bool TrySelectCommand(string str, ICommandTable commandTable,
+            [NotNullWhen(true)] out CommandMethod? method,
+            [NotNullWhen(true)] out object[]? extra);
     }
 }

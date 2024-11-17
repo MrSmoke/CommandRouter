@@ -4,15 +4,13 @@
     using System.Reflection;
     using Commands;
 
-    public class ApplicationManager
+    internal class ApplicationManager
     {
-        internal CommandFeatureProvider CommandFeatureProvider { get; set; }
+        internal readonly IList<Assembly> Assemblies = new List<Assembly>();
 
-        internal IList<Assembly> Assembiles = new List<Assembly>();
-
-        public void PopulateFeature(CommandFeature feature)
+        internal void PopulateFeature(CommandFeature feature)
         {
-            CommandFeatureProvider.PopulateFeature(Assembiles, feature);
+            DefaultCommandFeatureProvider.PopulateFeature(Assemblies, feature);
         }
     }
 }

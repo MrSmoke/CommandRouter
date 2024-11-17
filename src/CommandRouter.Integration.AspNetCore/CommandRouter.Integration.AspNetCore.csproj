@@ -3,11 +3,6 @@
   <PropertyGroup>
     <PackageId>CommandRouter.Integration.AspNetCore</PackageId>
     <Title>CommandRouter AspNetCore Integration</Title>
-    <TargetFramework>net8.0</TargetFramework>
-    <VersionPrefix>1.0.0-beta3</VersionPrefix>
-
-    <PackageProjectUrl>https://github.com/MrSmoke/CommandRouter</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/MrSmoke/CommandRouter.git</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

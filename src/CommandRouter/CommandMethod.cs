@@ -1,24 +1,24 @@
 ﻿namespace CommandRouter
 {
     using System;
-    using System.Collections.Generic;
     using Binding;
 
     public class CommandMethod
     {
-        public Guid Id;
+        public Guid Id { get; }
+        public string Command { get; }
 
-        internal Func<object[], CommandContext, object> Action { get; set; }
+        internal Func<object?[], CommandContext, object?> Action { get; }
+        internal ParameterInfo[] Parameters { get; }
 
-        public string Command { get; internal set; }
-
-        internal IList<ParameterInfo> Parameters = new List<ParameterInfo>();
-
-        internal Type ReturnType { get; set; }
-
-        public CommandMethod()
+        internal CommandMethod(string command,
+            Func<object?[], CommandContext, object?> action,
+            ParameterInfo[] parameters)
         {
             Id = Guid.NewGuid();
+            Command = command;
+            Action = action;
+            Parameters = parameters;
         }
     }
 }

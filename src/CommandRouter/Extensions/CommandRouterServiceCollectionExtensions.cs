@@ -15,7 +15,7 @@
 
     public static class CommandRouterServiceCollectionExtensions
     {
-        internal static HashSet<string> ReferenceAssemblies { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        private static HashSet<string> ReferenceAssemblies { get; } = new(StringComparer.OrdinalIgnoreCase)
         {
             "CommandRouter"
         };
@@ -64,7 +64,7 @@
             var context = DependencyContext.Load(entryAssembly);
 
             foreach(var assembly in GetCandidateAssemblies(entryAssembly, context))
-                manager.Assembiles.Add(assembly);
+                manager.Assemblies.Add(assembly);
 
             return manager;
         }
@@ -72,8 +72,6 @@
         private static void RegisterCommands(IServiceCollection services, ApplicationManager manager)
         {
             //Register command feature
-            manager.CommandFeatureProvider = new CommandFeatureProvider();
-
             var commandFeature = new CommandFeature();
             manager.PopulateFeature(commandFeature);
 
@@ -84,19 +82,19 @@
             }
         }
 
-        private static T GetServiceFromCollection<T>(IServiceCollection services)
+        private static T? GetServiceFromCollection<T>(IServiceCollection services)
         {
-            return (T)services
+            return (T?)services
                 .FirstOrDefault(d => d.ServiceType == typeof(T))
                 ?.ImplementationInstance;
         }
 
-        internal static IEnumerable<Assembly> GetCandidateAssemblies(Assembly entryAssembly, DependencyContext dependencyContext)
+        private static IEnumerable<Assembly> GetCandidateAssemblies(Assembly entryAssembly, DependencyContext? dependencyContext)
         {
             if (dependencyContext == null)
             {
                 // Use the entry assembly as the sole candidate.
-                return new[] { entryAssembly };
+                return [entryAssembly];
             }
 
             return GetCandidateLibraries(dependencyContext)
@@ -106,18 +104,13 @@
 
         internal static IEnumerable<RuntimeLibrary> GetCandidateLibraries(DependencyContext dependencyContext)
         {
-            if (ReferenceAssemblies == null)
-            {
-                return Enumerable.Empty<RuntimeLibrary>();
-            }
-
             var candidatesResolver = new CandidateResolver(dependencyContext.RuntimeLibraries, ReferenceAssemblies);
             return candidatesResolver.GetCandidates();
         }
 
         private class CandidateResolver
         {
-            private readonly IDictionary<string, Dependency> _dependencies;
+            private readonly Dictionary<string, Dependency> _dependencies;
 
             public CandidateResolver(IReadOnlyList<RuntimeLibrary> dependencies, ISet<string> referenceAssemblies)
             {
@@ -134,7 +127,7 @@
                 _dependencies = dependenciesWithNoDuplicates;
             }
 
-            private Dependency CreateDependency(RuntimeLibrary library, ISet<string> referenceAssemblies)
+            private static Dependency CreateDependency(RuntimeLibrary library, ISet<string> referenceAssemblies)
             {
                 var classification = DependencyClassification.Unknown;
                 if (referenceAssemblies.Contains(library.Name))
@@ -154,24 +147,21 @@
                 {
                     return candidateEntry.Classification;
                 }
-                else
+
+                var classification = DependencyClassification.NotCandidate;
+                foreach (var candidateDependency in candidateEntry.Library.Dependencies)
                 {
-                    var classification = DependencyClassification.NotCandidate;
-                    foreach (var candidateDependency in candidateEntry.Library.Dependencies)
+                    var dependencyClassification = ComputeClassification(candidateDependency.Name);
+                    if (dependencyClassification is DependencyClassification.Candidate or DependencyClassification.MvcReference)
                     {
-                        var dependencyClassification = ComputeClassification(candidateDependency.Name);
-                        if (dependencyClassification == DependencyClassification.Candidate ||
-                            dependencyClassification == DependencyClassification.MvcReference)
-                        {
-                            classification = DependencyClassification.Candidate;
-                            break;
-                        }
+                        classification = DependencyClassification.Candidate;
+                        break;
                     }
-
-                    candidateEntry.Classification = classification;
-
-                    return classification;
                 }
+
+                candidateEntry.Classification = classification;
+
+                return classification;
             }
 
             public IEnumerable<RuntimeLibrary> GetCandidates()

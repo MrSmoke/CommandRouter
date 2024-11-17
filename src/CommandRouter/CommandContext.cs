@@ -4,8 +4,7 @@
 
     public class CommandContext
     {
-        public IDictionary<string, object> Items { get; internal set; } = new Dictionary<string, object>();
-
-        public IReadOnlyList<object> Arguments { get; internal set; } = new List<object>();
+        public IDictionary<string, object> Items { get; } = new Dictionary<string, object>();
+        public object[] Arguments { get; internal set; } = [];
     }
 }

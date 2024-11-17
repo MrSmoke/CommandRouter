@@ -3,11 +3,6 @@
   <PropertyGroup>
     <PackageId>CommandRouter</PackageId>
     <Title>CommandRouter</Title>
-    <TargetFramework>net8.0</TargetFramework>
-    <VersionPrefix>1.0.0-beta6</VersionPrefix>
-
-    <PackageProjectUrl>https://github.com/MrSmoke/CommandRouter</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/MrSmoke/CommandRouter.git</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

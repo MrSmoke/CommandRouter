@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <Version>1.0.0-beta6</Version>
+    <Nullable>enable</Nullable>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PackageProjectUrl>https://github.com/MrSmoke/CommandRouter</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/MrSmoke/CommandRouter.git</RepositoryUrl>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AnalysisLevel>latest-Minimum</AnalysisLevel>
+  </PropertyGroup>
+</Project>
