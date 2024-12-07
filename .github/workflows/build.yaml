@@ -1,0 +1,39 @@
+name: Build and Test
+
+on:
+  push:
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --no-build --logger trx --results-directory ./test-results/
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: Test Results
+          path: ./test-results/
+        # Use always() to always run this step to publish test results when there are test failures
+        if: ${{ always() }}
