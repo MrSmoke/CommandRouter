@@ -9,7 +9,7 @@
         private readonly string _content;
         private readonly Encoding _encoding;
 
-        public StringResult(string content):this(content, Encoding.UTF8)
+        public StringResult(string content) : this(content, Encoding.UTF8)
         {
         }
 

@@ -25,7 +25,7 @@
 
             var mockBinder = new Mock<IPropertyConverter>();
 
-            var binder = new ParameterBinder(new List<IPropertyConverter> {mockBinder.Object});
+            var binder = new ParameterBinder(new List<IPropertyConverter> { mockBinder.Object });
 
             var objs = binder.BindParameters(parameterInfos, []);
 

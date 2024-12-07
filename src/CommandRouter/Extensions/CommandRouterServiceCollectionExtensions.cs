@@ -63,7 +63,7 @@
 
             var context = DependencyContext.Load(entryAssembly);
 
-            foreach(var assembly in GetCandidateAssemblies(entryAssembly, context))
+            foreach (var assembly in GetCandidateAssemblies(entryAssembly, context))
                 manager.Assemblies.Add(assembly);
 
             return manager;

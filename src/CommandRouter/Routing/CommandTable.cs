@@ -71,7 +71,7 @@ namespace CommandRouter.Routing
             var commandFeature = new CommandFeature();
             DefaultCommandFeatureProvider.PopulateFeature(applicationManager.Assemblies, commandFeature);
 
-            foreach(var type in commandFeature.Commands)
+            foreach (var type in commandFeature.Commands)
                 LoadCommands(type.AsType());
         }
 
