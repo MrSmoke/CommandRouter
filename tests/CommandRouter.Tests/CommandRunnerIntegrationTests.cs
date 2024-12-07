@@ -2,16 +2,14 @@
 
 using System;
 using System.Threading.Tasks;
-using Attributes;
-using Commands;
 using Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Results;
 using Xunit;
 
-public class UnitTest
+public class CommandRunnerIntegrationTests
 {
-    public UnitTest()
+    public CommandRunnerIntegrationTests()
     {
         _ = new TestCommand();
     }
@@ -43,33 +41,9 @@ public class UnitTest
     {
         var serviceCollection = new ServiceCollection();
 
-        serviceCollection.AddCommandRouter(typeof(UnitTest).Assembly);
+        serviceCollection.AddCommandRouter(typeof(CommandRunnerIntegrationTests).Assembly);
 
         var sp = serviceCollection.BuildServiceProvider();
         return sp.GetRequiredService<ICommandRunner>();
     }
 }
-
-#pragma warning disable CA1822
-public class TestCommand : Command
-{
-    [Command("void-return-null-param")]
-    public void VoidReturnNullParam(string? commandParam)
-    {
-        Assert.Null(commandParam);
-    }
-
-    [Command("void-return-param")]
-    public void VoidReturnParam(string commandParam)
-    {
-        Assert.Equal("testvalue", commandParam);
-    }
-
-    [Command("void-return-int-param")]
-    public void VoidReturnParam(int intParam)
-    {
-        Assert.Equal(999, intParam);
-    }
-}
-#pragma warning restore CA1822
-
