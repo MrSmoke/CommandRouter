@@ -27,7 +27,7 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test --no-build --logger trx --results-directory ./test-results/
+        run: dotnet test --configuration Release --no-build --logger trx --results-directory ./test-results/
 
       - name: Package
         run: dotnet pack --no-build --configuration Release --output ./build-output/
