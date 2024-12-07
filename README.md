@@ -1,5 +1,5 @@
 # Command Router
-[![Build status](https://ci.appveyor.com/api/projects/status/w91d4ch2ekaffagd?svg=true)](https://ci.appveyor.com/project/MrSmoke/commandrouter) [![NuGet](https://img.shields.io/nuget/v/CommandRouter.svg)](https://www.nuget.org/packages/CommandRouter)
+[![NuGet](https://img.shields.io/nuget/v/CommandRouter.svg)](https://www.nuget.org/packages/CommandRouter)
 
 Simple package to help route certain commands to functions, similar to routing in ASP.
 
