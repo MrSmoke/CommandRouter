@@ -1,20 +1,37 @@
-﻿namespace CommandRouter.Tests
+namespace CommandRouter.Tests
 {
     using System.Threading.Tasks;
+    using Activation;
     using CommandRouter.Binding;
-    using Exceptions;
-    using Routing;
     using Moq;
+    using Results;
+    using Routing;
     using Xunit;
 
     public class DefaultCommandSelectorTests
     {
+        private static TokenizedCommand Tokenize(string str)
+        {
+            Assert.True(new DefaultCommandTokenizer().TryTokenize(str, out var command, out _));
+            return command;
+        }
+
+        private static CommandTable CreateTable(params string[] commands)
+        {
+            var table = new CommandTable(Mock.Of<ICommandActivator>());
+
+            foreach (var command in commands)
+                table.AddCommand(command, (_, _) => EmptyResult.Empty);
+
+            return table;
+        }
+
         [Fact]
         public void SelectCommand_EmptyString_ReturnsMethod()
         {
             var commandMethod = new CommandMethod(
                 command: "",
-                (_, _) => Task.CompletedTask,
+                (_, _) => new ValueTask<ICommandResult>(EmptyResult.Empty),
                 parameters: []
             );
 
@@ -24,13 +41,11 @@
 
             var commandSelector = new DefaultCommandSelector();
 
-            var result = commandSelector.TrySelectCommand("", commandTable.Object, out var selectedMethod, out var extra);
+            var result = commandSelector.TrySelect(Tokenize(""), commandTable.Object, out var match);
 
             Assert.True(result);
-            Assert.NotNull(selectedMethod);
-            Assert.Equal(selectedMethod.Id, commandMethod.Id);
-            Assert.NotNull(extra);
-            Assert.Empty(extra);
+            Assert.Equal(commandMethod.Id, match.Method.Id);
+            Assert.Equal(0, match.ArgumentStart);
         }
 
         [Fact]
@@ -38,7 +53,7 @@
         {
             var commandMethod = new CommandMethod(
                 "test",
-                (_, _) => Task.CompletedTask,
+                (_, _) => new ValueTask<ICommandResult>(EmptyResult.Empty),
                 [
                     new ParameterInfo
                     {
@@ -53,52 +68,31 @@
 
             var commandSelector = new DefaultCommandSelector();
 
-            var result = commandSelector.TrySelectCommand("bacon", commandTable.Object, out var selectedMethod, out var extra);
+            var result = commandSelector.TrySelect(Tokenize("bacon"), commandTable.Object, out var match);
 
             Assert.True(result);
-            Assert.NotNull(selectedMethod);
-            Assert.Equal(selectedMethod.Id, commandMethod.Id);
-            Assert.NotNull(extra);
-            var extra1 = Assert.Single(extra);
-            Assert.Equal("bacon", extra1);
-        }
-
-        [Theory]
-        [InlineData("say \"hello", 4)]
-        [InlineData("say \"hello world", 4)]
-        [InlineData("say \"", 4)]
-        [InlineData("say \"hello\" \"world", 12)]
-        public void SelectCommand_UnterminatedQuote_ThrowsInvalidTokenException(string input, int expectedPosition)
-        {
-            var commandMethod = new CommandMethod(
-                "say",
-                (_, _) => Task.CompletedTask,
-                [
-                    new ParameterInfo
-                    {
-                        HasDefaultValue = false,
-                        Name = "param1",
-                        Type = typeof(string)
-                    }
-                ]);
-
-            var commandTable = new Mock<ICommandTable>();
-            commandTable.Setup(c => c.TryGetValue("say", out commandMethod)).Returns(true);
-
-            var commandSelector = new DefaultCommandSelector();
-
-            var ex = Assert.Throws<InvalidTokenException>(() =>
-                commandSelector.TrySelectCommand(input, commandTable.Object, out _, out _));
-
-            Assert.Equal(expectedPosition, ex.Position);
+            Assert.Equal(commandMethod.Id, match.Method.Id);
+            Assert.Equal(0, match.ArgumentStart);
         }
 
         [Fact]
-        public void SelectCommand_TerminatedQuote_ReturnsQuotedArgument()
+        public void SelectCommand_UnknownCommand_ReturnsFalse()
+        {
+            var commandTable = new Mock<ICommandTable>();
+
+            var commandSelector = new DefaultCommandSelector();
+
+            var result = commandSelector.TrySelect(Tokenize("nope"), commandTable.Object, out _);
+
+            Assert.False(result);
+        }
+
+        [Fact]
+        public void SelectCommand_QuotedArgument_ReturnsArgumentStart()
         {
             var commandMethod = new CommandMethod(
                 "say",
-                (_, _) => Task.CompletedTask,
+                (_, _) => new ValueTask<ICommandResult>(EmptyResult.Empty),
                 [
                     new ParameterInfo
                     {
@@ -113,11 +107,79 @@
 
             var commandSelector = new DefaultCommandSelector();
 
-            var result = commandSelector.TrySelectCommand("say \"hello world\"", commandTable.Object, out _, out var extra);
+            var tokenized = Tokenize("say \"hello world\"");
+            var result = commandSelector.TrySelect(tokenized, commandTable.Object, out var match);
 
             Assert.True(result);
-            Assert.NotNull(extra);
-            Assert.Equal("hello world", Assert.Single(extra));
+            Assert.Equal(1, match.ArgumentStart);
+            Assert.Equal("hello world", Assert.Single(tokenized.GetArguments(match.ArgumentStart)));
+        }
+
+        [Theory]
+        [InlineData("user add bob", "user add", 2)]
+        [InlineData("user remove bob", "user", 1)]
+        [InlineData("user add admin bob", "user add admin", 3)]
+        [InlineData("user add admin", "user add admin", 3)]
+        [InlineData("user", "user", 1)]
+        [InlineData("user    add", "user add", 2)]
+        public void SelectCommand_CommandTable_SelectsLongestMatchingCommand(string input, string expectedCommand,
+            int expectedArgumentStart)
+        {
+            var table = CreateTable("user", "user add", "user add admin");
+
+            var result = new DefaultCommandSelector().TrySelect(Tokenize(input), table, out var match);
+
+            Assert.True(result);
+            Assert.Equal(expectedCommand, match.Method.Command);
+            Assert.Equal(expectedArgumentStart, match.ArgumentStart);
+        }
+
+        [Theory]
+        [InlineData("user")]
+        [InlineData("other")]
+        [InlineData("")]
+        public void SelectCommand_CommandTable_NoMatchingCommand_ReturnsFalse(string input)
+        {
+            var table = CreateTable("user add");
+
+            var result = new DefaultCommandSelector().TrySelect(Tokenize(input), table, out _);
+
+            Assert.False(result);
+        }
+
+        [Fact]
+        public void SelectCommand_CommandTable_FallsBackToRootRoute()
+        {
+            var table = CreateTable("", "user");
+
+            var result = new DefaultCommandSelector().TrySelect(Tokenize("bacon eggs"), table, out var match);
+
+            Assert.True(result);
+            Assert.Equal("", match.Method.Command);
+            Assert.Equal(0, match.ArgumentStart);
+        }
+
+        [Fact]
+        public void SelectCommand_CommandTable_CommandAddedAfterFirstSelect_IsSelected()
+        {
+            var table = CreateTable("user");
+            var selector = new DefaultCommandSelector();
+
+            Assert.False(selector.TrySelect(Tokenize("ping"), table, out _));
+
+            table.AddCommand("ping", (_, _) => EmptyResult.Empty);
+
+            Assert.True(selector.TrySelect(Tokenize("ping"), table, out var match));
+            Assert.Equal("ping", match.Method.Command);
+        }
+
+        [Fact]
+        public void GetArguments_ReturnsTokenValuesFromIndex()
+        {
+            var tokenized = Tokenize("user add \"bob smith\" admin");
+
+            Assert.Equal(["bob smith", "admin"], tokenized.GetArguments(2));
+            Assert.Empty(tokenized.GetArguments(4));
         }
     }
 }

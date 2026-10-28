@@ -1,20 +1,36 @@
-﻿namespace CommandRouter.Commands
+namespace CommandRouter.Commands
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Reflection;
 
     internal static class DefaultCommandFeatureProvider
     {
         public static void PopulateFeature(IEnumerable<Assembly> assemblies, CommandFeature commandFeature)
         {
+            var seen = new HashSet<Type>(commandFeature.Commands);
+
             foreach (var assembly in assemblies)
             {
-                foreach (var type in assembly.DefinedTypes)
+                foreach (var type in GetTypes(assembly))
                 {
-                    if (IsCommand(type) && !commandFeature.Commands.Contains(type))
+                    if (IsCommand(type) && seen.Add(type))
                         commandFeature.Commands.Add(type);
                 }
+            }
+        }
+
+        private static IEnumerable<TypeInfo> GetTypes(Assembly assembly)
+        {
+            try
+            {
+                return assembly.DefinedTypes;
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                // Use the types that did load
+                return ex.Types.Where(t => t != null).Select(t => t!.GetTypeInfo());
             }
         }
 

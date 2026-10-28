@@ -2,12 +2,11 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Linq;
     using System.Reflection;
     using Activation;
     using Binding;
-    using Commands;
+    using Converters;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.DependencyInjection.Extensions;
     using Microsoft.Extensions.DependencyModel;
@@ -20,37 +19,85 @@
             "CommandRouter"
         };
 
-        public static void AddCommandRouter(this IServiceCollection services, Assembly entryAssembly)
+        /// <summary>
+        /// Adds the command router using the entry assembly as the command source.
+        /// </summary>
+        public static IServiceCollection AddCommandRouter(this IServiceCollection services)
         {
-            AddCommandRouter(services, entryAssembly, new CommandRouterOptions());
+            return services.AddCommandRouter(GetEntryAssembly());
         }
 
-        public static void AddCommandRouter(this IServiceCollection services, Assembly entryAssembly, Action<CommandRouterOptions> optionsFunc)
+        public static IServiceCollection AddCommandRouter(this IServiceCollection services,
+            Action<CommandRouterOptions> optionsFunc)
         {
+            return services.AddCommandRouter(GetEntryAssembly(), optionsFunc);
+        }
+
+        public static IServiceCollection AddCommandRouter(this IServiceCollection services, Assembly entryAssembly)
+        {
+            return AddCore(services, entryAssembly, new CommandRouterOptions());
+        }
+
+        public static IServiceCollection AddCommandRouter(this IServiceCollection services, Assembly entryAssembly,
+            Action<CommandRouterOptions> optionsFunc)
+        {
+            ArgumentNullException.ThrowIfNull(optionsFunc);
+
             var options = new CommandRouterOptions();
             optionsFunc(options);
 
-            AddCommandRouter(services, entryAssembly, options);
+            return AddCore(services, entryAssembly, options);
         }
 
-        private static void AddCommandRouter(this IServiceCollection services, Assembly entryAssembly, CommandRouterOptions options)
+        /// <summary>
+        /// Builds the command table now, so registration problems (duplicate commands, unsupported return types, etc)
+        /// are reported at startup rather than on the first command.
+        /// </summary>
+        public static IServiceProvider ValidateCommandRouter(this IServiceProvider provider)
         {
+            ArgumentNullException.ThrowIfNull(provider);
+
+            _ = provider.GetRequiredService<ICommandTable>();
+            return provider;
+        }
+
+        // Options passed to later calls are ignored if the router was already registered
+        private static IServiceCollection AddCore(IServiceCollection services, Assembly entryAssembly,
+            CommandRouterOptions options)
+        {
+            ArgumentNullException.ThrowIfNull(services);
+            ArgumentNullException.ThrowIfNull(entryAssembly);
+
             var manager = GetApplicationManager(services, entryAssembly);
-            services.AddSingleton(manager);
+            services.TryAddSingleton(manager);
 
             RegisterCommands(services, manager);
 
-            services.AddSingleton<ICommandTable, CommandTable>();
+            services.TryAddSingleton<ICommandTable>(sp => new CommandTable(
+                sp.GetRequiredService<ICommandActivator>(),
+                sp.GetRequiredService<ApplicationManager>()));
 
-            services.AddSingleton<ICommandActivator, DefaultCommandActivator>();
+            services.TryAddSingleton<ICommandActivator, DefaultCommandActivator>();
 
-            services.AddSingleton<ICommandRunner, CommandRunner>();
+            services.TryAddSingleton<ICommandRunner, CommandRunner>();
 
-            services.AddSingleton<ICommandSelector, DefaultCommandSelector>();
+            services.TryAddSingleton<ICommandTokenizer, DefaultCommandTokenizer>();
 
-            var paramBinder = new ParameterBinder(options.PropertyConverters);
+            services.TryAddSingleton<ICommandSelector, DefaultCommandSelector>();
 
-            services.AddSingleton(paramBinder);
+            //user converters first, the built-in converter is the fallback
+            var converters = new List<IPropertyConverter>(options.PropertyConverters) { new SystemTypeConverter() };
+
+            services.TryAddSingleton(new ParameterBinder(converters));
+
+            return services;
+        }
+
+        private static Assembly GetEntryAssembly()
+        {
+            return Assembly.GetEntryAssembly() ??
+                   throw new InvalidOperationException(
+                       "The entry assembly could not be determined, pass the assembly explicitly.");
         }
 
         private static ApplicationManager GetApplicationManager(IServiceCollection services, Assembly entryAssembly)
@@ -71,12 +118,8 @@
 
         private static void RegisterCommands(IServiceCollection services, ApplicationManager manager)
         {
-            //Register command feature
-            var commandFeature = new CommandFeature();
-            manager.PopulateFeature(commandFeature);
-
             //register command classes in DI
-            foreach (var command in commandFeature.Commands)
+            foreach (var command in manager.GetCommandFeature().Commands)
             {
                 services.TryAddTransient(command.AsType());
             }
@@ -102,7 +145,7 @@
                 .Select(Assembly.Load);
         }
 
-        internal static IEnumerable<RuntimeLibrary> GetCandidateLibraries(DependencyContext dependencyContext)
+        private static IEnumerable<RuntimeLibrary> GetCandidateLibraries(DependencyContext dependencyContext)
         {
             var candidatesResolver = new CandidateResolver(dependencyContext.RuntimeLibraries, ReferenceAssemblies);
             return candidatesResolver.GetCandidates();
@@ -119,7 +162,8 @@
                 {
                     if (dependenciesWithNoDuplicates.ContainsKey(dependency.Name))
                     {
-                        throw new InvalidOperationException();
+                        throw new InvalidOperationException(
+                            $"The dependency context contains the library '{dependency.Name}' more than once.");
                     }
                     dependenciesWithNoDuplicates.Add(dependency.Name, CreateDependency(dependency, referenceAssemblies));
                 }
@@ -140,9 +184,10 @@
 
             private DependencyClassification ComputeClassification(string dependency)
             {
-                Debug.Assert(_dependencies.ContainsKey(dependency));
+                // A dependency that isn't part of the context can't lead to a candidate
+                if (!_dependencies.TryGetValue(dependency, out var candidateEntry))
+                    return DependencyClassification.NotCandidate;
 
-                var candidateEntry = _dependencies[dependency];
                 if (candidateEntry.Classification != DependencyClassification.Unknown)
                 {
                     return candidateEntry.Classification;
@@ -175,17 +220,11 @@
                 }
             }
 
-            private class Dependency
+            private class Dependency(RuntimeLibrary library, DependencyClassification classification)
             {
-                public Dependency(RuntimeLibrary library, DependencyClassification classification)
-                {
-                    Library = library;
-                    Classification = classification;
-                }
+                public RuntimeLibrary Library { get; } = library;
 
-                public RuntimeLibrary Library { get; }
-
-                public DependencyClassification Classification { get; set; }
+                public DependencyClassification Classification { get; set; } = classification;
 
                 public override string ToString()
                 {

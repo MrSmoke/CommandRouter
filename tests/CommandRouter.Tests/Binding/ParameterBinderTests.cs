@@ -2,10 +2,10 @@
 {
     using System;
     using System.Collections.Generic;
+    using CommandRouter.Binding;
+    using Converters;
     using Moq;
     using Xunit;
-    using Converters;
-    using CommandRouter.Binding;
 
     public class ParameterBinderTests
     {
@@ -73,8 +73,8 @@
         private static IPropertyConverter CreatePassThroughConverter()
         {
             var converter = new Mock<IPropertyConverter>();
-            converter.Setup(c => c.CanConvert(It.IsAny<Type>(), It.IsAny<object>())).Returns(true);
-            converter.Setup(c => c.Convert(It.IsAny<Type>(), It.IsAny<object>())).Returns((Type _, object v) => v);
+            converter.Setup(c => c.CanConvert(It.IsAny<Type>(), It.IsAny<string>())).Returns(true);
+            converter.Setup(c => c.Convert(It.IsAny<Type>(), It.IsAny<string>())).Returns((Type _, string v) => v);
             return converter.Object;
         }
     }

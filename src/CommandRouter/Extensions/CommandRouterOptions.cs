@@ -5,12 +5,10 @@
 
     public class CommandRouterOptions
     {
-        public List<IPropertyConverter> PropertyConverters { get; } = new List<IPropertyConverter>();
-
-        public CommandRouterOptions()
-        {
-            //Default converter
-            PropertyConverters.Add(new SystemTypeConverter());
-        }
+        /// <summary>
+        /// Custom property converters.
+        /// They are checked in order, before the built-in <see cref="SystemTypeConverter"/>.
+        /// </summary>
+        public List<IPropertyConverter> PropertyConverters { get; } = [];
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace CommandRouter
+namespace CommandRouter
 {
     using System;
     using System.Collections.Generic;
@@ -11,12 +11,15 @@
     internal class CommandRunner : ICommandRunner
     {
         private readonly ICommandTable _commandTable;
+        private readonly ICommandTokenizer _commandTokenizer;
         private readonly ICommandSelector _commandSelector;
         private readonly ParameterBinder _parameterBinder;
 
-        public CommandRunner(ICommandTable commandTable, ICommandSelector commandSelector, ParameterBinder parameterBinder)
+        public CommandRunner(ICommandTable commandTable, ICommandTokenizer commandTokenizer,
+            ICommandSelector commandSelector, ParameterBinder parameterBinder)
         {
             _commandTable = commandTable;
+            _commandTokenizer = commandTokenizer;
             _commandSelector = commandSelector;
             _parameterBinder = parameterBinder;
         }
@@ -30,8 +33,18 @@
         {
             ArgumentNullException.ThrowIfNull(command);
 
-            if (!_commandSelector.TrySelectCommand(command, _commandTable, out var method, out var args))
+            if (!_commandTokenizer.TryTokenize(command, out var tokenizedCommand, out var errorPosition))
+            {
+                throw new InvalidTokenException(
+                    $"Invalid token starting at position {errorPosition}",
+                    errorPosition);
+            }
+
+            if (!_commandSelector.TrySelect(tokenizedCommand, _commandTable, out var match))
                 throw new CommandNotFoundException(command);
+
+            var method = match.Method;
+            var args = tokenizedCommand.GetArguments(match.ArgumentStart);
 
             var parameters = _parameterBinder.BindParameters(method.Parameters, args);
 
@@ -44,28 +57,10 @@
             if (contextItems != null)
             {
                 foreach (var conItems in contextItems)
-                {
-                    if (!context.Items.ContainsKey(conItems.Key))
-                        context.Items.Add(conItems.Key, conItems.Value);
-                }
+                    context.Items.TryAdd(conItems.Key, conItems.Value);
             }
 
-            var result = method.Action(parameters, context);
-
-            switch (result)
-            {
-                case ICommandResult commandResult:
-                    return commandResult;
-                case Task<ICommandResult> taskCommandResult:
-                    return await taskCommandResult.ConfigureAwait(false);
-                case Task taskResult:
-                    await taskResult;
-                    return EmptyResult.Empty;
-                case null:
-                    return EmptyResult.Empty;
-                default:
-                    throw new CommandRouterException("Failed to run command");
-            }
+            return await method.Action(parameters, context).ConfigureAwait(false);
         }
     }
 }

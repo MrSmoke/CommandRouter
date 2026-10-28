@@ -4,7 +4,7 @@ namespace CommandRouter.Converters
 
     public interface IPropertyConverter
     {
-        bool CanConvert(Type propertyType, object value);
-        object Convert(Type propertyType, object value);
+        bool CanConvert(Type propertyType, string value);
+        object Convert(Type propertyType, string value);
     }
 }

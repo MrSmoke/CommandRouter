@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using Converters;
+    using Exceptions;
 
     internal class ParameterBinder
     {
@@ -18,7 +19,7 @@
             _propertyConverters.Add(propertyConverter);
         }
 
-        internal object?[] BindParameters(ParameterInfo[] parameterInfos, object[] parameters)
+        internal object?[] BindParameters(ParameterInfo[] parameterInfos, string[] parameters)
         {
             var boundParams = new object?[parameterInfos.Length];
 
@@ -34,7 +35,7 @@
             return boundParams;
         }
 
-        private object? ConvertParameter(ParameterInfo paramInfo, object? value)
+        private object? ConvertParameter(ParameterInfo paramInfo, string? value)
         {
             // Nullable support
             if (value is null)
@@ -49,12 +50,13 @@
                     throw new ArgumentNullException(paramInfo.Name);
             }
 
+            // Nullable parameter without a supplied value
+            if (value is null)
+                return null;
+
             for (var i = 0; i < _propertyConverters.Count; i++)
             {
                 var converter = _propertyConverters[i];
-
-                if (value is null)
-                    continue;
 
                 if (!converter.CanConvert(paramInfo.Type, value))
                     continue;
@@ -62,8 +64,8 @@
                 return converter.Convert(paramInfo.Type, value);
             }
 
-            //No converters
-            return paramInfo.HasDefaultValue ? paramInfo.DefaultValue : null;
+            throw new CommandRouterException(
+                $"No converter can convert '{value}' to {paramInfo.Type} for parameter '{paramInfo.Name}'");
         }
     }
 }

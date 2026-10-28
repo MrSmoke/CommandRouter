@@ -1,140 +1,45 @@
-﻿namespace CommandRouter
+namespace CommandRouter
 {
-    using System.Collections.Generic;
-    using System.Diagnostics.CodeAnalysis;
+    using System;
     using System.Linq;
-    using System.Text.RegularExpressions;
-    using Exceptions;
     using Routing;
 
-    internal partial class DefaultCommandSelector : ICommandSelector
+    internal class DefaultCommandSelector : ICommandSelector
     {
-        public bool TrySelectCommand(string str, ICommandTable commandTable,
-            [NotNullWhen(true)] out CommandMethod? method,
-            [NotNullWhen(true)] out object[]? extra)
+        public bool TrySelect(TokenizedCommand command, ICommandTable commandTable, out CommandMatch match)
         {
-            var tokens = Tokenizer.Tokenize(str);
-            var index = tokens.Count;
+            ArgumentNullException.ThrowIfNull(command);
+            ArgumentNullException.ThrowIfNull(commandTable);
 
-            while (index > -1)
-            {
-                //get the command string
-                string cmd;
-                if (index == 0)
-                {
-                    //check the root/default route
-                    cmd = "";
-                }
-                else
-                {
-                    cmd = string.Join(" ", tokens.Take(index));
-                }
+            // The default command table can match the tokens directly
+            if (commandTable is ICommandMatcher matcher)
+                return matcher.TryMatch(command.Tokens, out match);
 
-                if (commandTable.TryGetValue(cmd, out method))
-                {
-                    extra = tokens.Skip(index).ToArray();
-                    return true;
-                }
-
-                --index;
-            }
-
-            method = null;
-            extra = null;
-            return false;
+            return TrySelectFromDictionary(command, commandTable, out match);
         }
 
-        private static partial class Tokenizer
+        // Fallback for custom command tables: try the longest command first, then shorter ones
+        private static bool TrySelectFromDictionary(TokenizedCommand command, ICommandTable commandTable,
+            out CommandMatch match)
         {
-            public static List<string> Tokenize(string command)
+            var tokens = command.Tokens;
+
+            for (var index = tokens.Count; index > -1; --index)
             {
-                var tokens = new List<string>();
+                //index 0 is the root/default route
+                var cmd = index == 0
+                    ? ""
+                    : string.Join(" ", tokens.Take(index).Select(t => t.Value));
 
-                var index = 0;
-                IgnoreWhiteSpaces(command, ref index);
+                if (!commandTable.TryGetValue(cmd, out var method))
+                    continue;
 
-                while (index < command.Length)
-                {
-                    switch (command[index])
-                    {
-                        case '\"':
-                            var quoteStart = index;
-                            ++index;
-                            tokens.Add(GetStringInQuotation(command, ref index, quoteStart));
-                            break;
-                        default:
-                            tokens.Add(GetNextWord(command, ref index));
-                            break;
-                    }
-
-                    IgnoreWhiteSpaces(command, ref index);
-                }
-
-                return tokens;
+                match = new CommandMatch(method, index);
+                return true;
             }
 
-            private static string GetNextWord(string command, ref int index)
-            {
-                var match = TokenizerRegex().Match(command[index..]);
-
-                var delimitersIndex = match.Success ? match.Index + index : -1;
-
-                string retVal;
-
-                if (delimitersIndex == -1)
-                {
-                    retVal = command[index..];
-                    index = command.Length;
-                    return retVal;
-                }
-
-                retVal = command.Substring(index, delimitersIndex - index);
-
-                index = delimitersIndex;
-
-                return retVal;
-            }
-
-            private static string GetStringInQuotation(string command, ref int index, int quoteStart)
-            {
-                var words = new List<string>();
-                IgnoreWhiteSpaces(command, ref index);
-
-                while (index < command.Length)
-                {
-                    words.Add(GetNextWord(command, ref index));
-                    IgnoreWhiteSpaces(command, ref index);
-
-                    if (index < command.Length && command[index] == '\"')
-                        break;
-                }
-
-                if (index >= command.Length)
-                {
-                    throw new InvalidTokenException(
-                        $"Missing closing quote for the string starting at position {quoteStart}",
-                        quoteStart);
-                }
-
-                //skip the closing quote
-                ++index;
-
-                return string.Join(" ", words);
-            }
-
-            private static void IgnoreWhiteSpaces(string command, ref int index)
-            {
-                while (index < command.Length)
-                {
-                    if (command[index] != ' ')
-                        break;
-
-                    ++index;
-                }
-            }
-
-            [GeneratedRegex("( |\")")]
-            private static partial Regex TokenizerRegex();
+            match = default;
+            return false;
         }
     }
 }
