@@ -4,6 +4,7 @@
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using System.Text.RegularExpressions;
+    using Exceptions;
     using Routing;
 
     internal partial class DefaultCommandSelector : ICommandSelector
@@ -47,18 +48,19 @@
         {
             public static List<string> Tokenize(string command)
             {
-                command = command.Trim();
                 var tokens = new List<string>();
 
                 var index = 0;
+                IgnoreWhiteSpaces(command, ref index);
 
                 while (index < command.Length)
                 {
                     switch (command[index])
                     {
                         case '\"':
+                            var quoteStart = index;
                             ++index;
-                            tokens.Add(GetStringInQuotation(command, ref index));
+                            tokens.Add(GetStringInQuotation(command, ref index, quoteStart));
                             break;
                         default:
                             tokens.Add(GetNextWord(command, ref index));
@@ -93,7 +95,7 @@
                 return retVal;
             }
 
-            private static string GetStringInQuotation(string command, ref int index)
+            private static string GetStringInQuotation(string command, ref int index, int quoteStart)
             {
                 var words = new List<string>();
                 IgnoreWhiteSpaces(command, ref index);
@@ -107,13 +109,22 @@
                         break;
                 }
 
+                if (index >= command.Length)
+                {
+                    throw new InvalidTokenException(
+                        $"Missing closing quote for the string starting at position {quoteStart}",
+                        quoteStart);
+                }
+
+                //skip the closing quote
                 ++index;
+
                 return string.Join(" ", words);
             }
 
             private static void IgnoreWhiteSpaces(string command, ref int index)
             {
-                while (index != command.Length)
+                while (index < command.Length)
                 {
                     if (command[index] != ' ')
                         break;
