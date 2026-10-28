@@ -7,6 +7,6 @@
     {
         public Task ExecuteAsync(Stream resultStream) => Task.CompletedTask;
 
-        public static EmptyResult Empty => new();
+        public static readonly EmptyResult Empty = new();
     }
 }
