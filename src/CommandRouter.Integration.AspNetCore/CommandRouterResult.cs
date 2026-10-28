@@ -1,21 +1,13 @@
-﻿namespace CommandRouter.Integration.AspNetCore
+﻿namespace CommandRouter.Integration.AspNetCore;
+
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Results;
+
+public class CommandRouterResult(ICommandResult commandResult) : IActionResult
 {
-    using System.Threading.Tasks;
-    using Microsoft.AspNetCore.Mvc;
-    using Results;
-
-    public class CommandRouterResult : IActionResult
+    public Task ExecuteResultAsync(ActionContext context)
     {
-        private readonly ICommandResult _commandResult;
-
-        public CommandRouterResult(ICommandResult commandResult)
-        {
-            _commandResult = commandResult;
-        }
-
-        public Task ExecuteResultAsync(ActionContext context)
-        {
-            return _commandResult.ExecuteAsync(context.HttpContext.Response.Body);
-        }
+        return commandResult.ExecuteAsync(context.HttpContext.Response.Body);
     }
 }

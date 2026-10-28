@@ -1,10 +1,9 @@
-﻿namespace CommandRouter.Commands
-{
-    using System.Collections.Generic;
-    using System.Reflection;
+﻿namespace CommandRouter.Commands;
 
-    public class CommandFeature
-    {
-        public IList<TypeInfo> Commands { get; } = new List<TypeInfo>();
-    }
+using System.Collections.Generic;
+using System.Reflection;
+
+public class CommandFeature
+{
+    public IList<TypeInfo> Commands { get; } = new List<TypeInfo>();
 }

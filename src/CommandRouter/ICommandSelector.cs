@@ -1,9 +1,8 @@
-namespace CommandRouter
-{
-    using Routing;
+namespace CommandRouter;
 
-    public interface ICommandSelector
-    {
-        bool TrySelect(TokenizedCommand command, ICommandTable commandTable, out CommandMatch match);
-    }
+using Routing;
+
+public interface ICommandSelector
+{
+    bool TrySelect(TokenizedCommand command, ICommandTable commandTable, out CommandMatch match);
 }

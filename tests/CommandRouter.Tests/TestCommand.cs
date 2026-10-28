@@ -35,14 +35,9 @@ public class TestCommand : Command
     }
 }
 
-public class CustomValue
+public class CustomValue(string text)
 {
-    public CustomValue(string text)
-    {
-        Text = text;
-    }
-
-    public string Text { get; }
+    public string Text { get; } = text;
 }
 
 public class CustomValueConverter : IPropertyConverter
