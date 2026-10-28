@@ -1,25 +1,17 @@
-﻿namespace CommandRouter.Activation
+﻿namespace CommandRouter.Activation;
+
+using System;
+using Microsoft.Extensions.DependencyInjection;
+
+public class DefaultCommandActivator(IServiceProvider serviceProvider) : ICommandActivator
 {
-    using System;
-    using Microsoft.Extensions.DependencyInjection;
-
-    public class DefaultCommandActivator : ICommandActivator
+    public object? Create(Type type)
     {
-        private readonly IServiceProvider _serviceProvider;
+        return serviceProvider.GetService(type);
+    }
 
-        public DefaultCommandActivator(IServiceProvider serviceProvider)
-        {
-            _serviceProvider = serviceProvider;
-        }
-
-        public object? Create(Type type)
-        {
-            return _serviceProvider.GetService(type);
-        }
-
-        public ICommandActivatorScope CreateScope()
-        {
-            return new CommandActivatorScope(_serviceProvider.CreateScope());
-        }
+    public ICommandActivatorScope CreateScope()
+    {
+        return new CommandActivatorScope(serviceProvider.CreateScope());
     }
 }

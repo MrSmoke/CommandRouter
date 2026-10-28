@@ -1,15 +1,14 @@
-﻿namespace CommandRouter.Exceptions
+﻿namespace CommandRouter.Exceptions;
+
+using System;
+
+public class CommandRouterException : Exception
 {
-    using System;
-
-    public class CommandRouterException : Exception
+    public CommandRouterException(string message) : base(message)
     {
-        public CommandRouterException(string message) : base(message)
-        {
-        }
+    }
 
-        public CommandRouterException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
+    public CommandRouterException(string message, Exception innerException) : base(message, innerException)
+    {
     }
 }

@@ -1,9 +1,8 @@
-namespace CommandRouter.Activation
-{
-    using System;
+namespace CommandRouter.Activation;
 
-    public interface ICommandActivatorScope : IDisposable
-    {
-        ICommandActivator CommandActivator { get; }
-    }
+using System;
+
+public interface ICommandActivatorScope : IDisposable
+{
+    ICommandActivator CommandActivator { get; }
 }

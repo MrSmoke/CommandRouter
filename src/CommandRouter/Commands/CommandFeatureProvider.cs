@@ -1,44 +1,59 @@
-﻿namespace CommandRouter.Commands
-{
-    using System;
-    using System.Collections.Generic;
-    using System.Reflection;
+﻿namespace CommandRouter.Commands;
 
-    internal static class DefaultCommandFeatureProvider
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+
+internal static class DefaultCommandFeatureProvider
+{
+    public static void PopulateFeature(IEnumerable<Assembly> assemblies, CommandFeature commandFeature)
     {
-        public static void PopulateFeature(IEnumerable<Assembly> assemblies, CommandFeature commandFeature)
+        var seen = new HashSet<Type>(commandFeature.Commands);
+
+        foreach (var assembly in assemblies)
         {
-            foreach (var assembly in assemblies)
+            foreach (var type in GetTypes(assembly))
             {
-                foreach (var type in assembly.DefinedTypes)
-                {
-                    if (IsCommand(type) && !commandFeature.Commands.Contains(type))
-                        commandFeature.Commands.Add(type);
-                }
+                if (IsCommand(type) && seen.Add(type))
+                    commandFeature.Commands.Add(type);
             }
         }
+    }
 
-        private static bool IsCommand(Type typeInfo)
+    private static IEnumerable<TypeInfo> GetTypes(Assembly assembly)
+    {
+        try
         {
-            if (!typeInfo.IsClass)
-                return false;
-
-            if (typeInfo.IsAbstract)
-                return false;
-
-            if (!typeInfo.IsPublic)
-                return false;
-
-            if (typeInfo.ContainsGenericParameters)
-                return false;
-
-            if (!typeInfo.IsSubclassOf(typeof(Command)))
-                return false;
-
-            if (!typeInfo.Name.EndsWith("Command", StringComparison.OrdinalIgnoreCase))
-                return false;
-
-            return true;
+            return assembly.DefinedTypes;
         }
+        catch (ReflectionTypeLoadException ex)
+        {
+            // Use the types that did load
+            return ex.Types.Where(t => t != null).Select(t => t!.GetTypeInfo());
+        }
+    }
+
+    private static bool IsCommand(Type typeInfo)
+    {
+        if (!typeInfo.IsClass)
+            return false;
+
+        if (typeInfo.IsAbstract)
+            return false;
+
+        if (!typeInfo.IsPublic)
+            return false;
+
+        if (typeInfo.ContainsGenericParameters)
+            return false;
+
+        if (!typeInfo.IsSubclassOf(typeof(Command)))
+            return false;
+
+        if (!typeInfo.Name.EndsWith("Command", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return true;
     }
 }

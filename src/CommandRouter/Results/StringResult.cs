@@ -1,28 +1,18 @@
-﻿namespace CommandRouter.Results
+﻿namespace CommandRouter.Results;
+
+using System.IO;
+using System.Text;
+using System.Threading.Tasks;
+
+public class StringResult(string content, Encoding encoding) : ICommandResult
 {
-    using System.IO;
-    using System.Text;
-    using System.Threading.Tasks;
-
-    public class StringResult : ICommandResult
+    public StringResult(string content) : this(content, Encoding.UTF8)
     {
-        private readonly string _content;
-        private readonly Encoding _encoding;
+    }
 
-        public StringResult(string content) : this(content, Encoding.UTF8)
-        {
-        }
-
-        public StringResult(string content, Encoding encoding)
-        {
-            _content = content;
-            _encoding = encoding;
-        }
-
-        public Task ExecuteAsync(Stream resultStream)
-        {
-            var bytes = _encoding.GetBytes(_content);
-            return resultStream.WriteAsync(bytes, 0, bytes.Length);
-        }
+    public Task ExecuteAsync(Stream resultStream)
+    {
+        var bytes = encoding.GetBytes(content);
+        return resultStream.WriteAsync(bytes, 0, bytes.Length);
     }
 }

@@ -1,79 +1,70 @@
-﻿namespace CommandRouter.Binding
+﻿namespace CommandRouter.Binding;
+
+using System;
+using System.Collections.Generic;
+using Converters;
+using Exceptions;
+
+internal class ParameterBinder
 {
-    using System;
-    using System.Collections.Generic;
-    using Converters;
+    private readonly IList<IPropertyConverter> _propertyConverters;
 
-    internal class ParameterBinder
+    internal ParameterBinder(IList<IPropertyConverter> propertyConverters)
     {
-        private readonly IList<IPropertyConverter> _propertyConverters;
+        _propertyConverters = propertyConverters;
+    }
 
-        internal ParameterBinder(IList<IPropertyConverter> propertyConverters)
+    internal void AddConverter(IPropertyConverter propertyConverter)
+    {
+        _propertyConverters.Add(propertyConverter);
+    }
+
+    internal object?[] BindParameters(ParameterInfo[] parameterInfos, string[] parameters)
+    {
+        var boundParams = new object?[parameterInfos.Length];
+
+        for (var i = 0; i < parameterInfos.Length; i++)
         {
-            _propertyConverters = propertyConverters;
+            var pInfo = parameterInfos[i];
+
+            var value = i < parameters.Length ? parameters[i] : null;
+
+            boundParams[i] = ConvertParameter(pInfo, value);
         }
 
-        internal void AddConverter(IPropertyConverter propertyConverter)
+        return boundParams;
+    }
+
+    private object? ConvertParameter(ParameterInfo paramInfo, string? value)
+    {
+        // Nullable support
+        if (value is null)
         {
-            _propertyConverters.Add(propertyConverter);
+            // When the value is null and we have a default value, use that
+            if (paramInfo.HasDefaultValue)
+                return paramInfo.DefaultValue;
+
+            // If we don't have a default value, check if we are allowed to be nullable
+            // If not, throw
+            if (!paramInfo.IsNullable)
+                throw new ArgumentNullException(paramInfo.Name);
         }
 
-        internal object?[] BindParameters(ParameterInfo[] parameterInfos, object[] parameters)
+        // Nullable parameter without a supplied value
+        if (value is null)
+            return null;
+
+        for (var i = 0; i < _propertyConverters.Count; i++)
         {
-            var boundParams = new object?[parameterInfos.Length];
+            var converter = _propertyConverters[i];
 
-            for (var i = 0; i < parameterInfos.Length; i++)
-            {
-                var pInfo = parameterInfos[i];
+            if (!converter.CanConvert(paramInfo.Type, value))
+                continue;
 
-                object? value;
-                if (parameters.Length == 0 || i >= parameters.Length)
-                    value = null;
-                else
-                    value = parameters[i];
-
-                if (i > parameters.Length)
-                {
-                    boundParams[i] = null;
-                    continue;
-                }
-
-                boundParams[i] = ConvertParameter(pInfo, value);
-            }
-
-            return boundParams;
+            return converter.Convert(paramInfo.Type, value);
         }
 
-        private object? ConvertParameter(ParameterInfo paramInfo, object? value)
-        {
-            // Nullable support
-            if (value is null)
-            {
-                // When the value is null and we have a default value, use that
-                if (paramInfo.HasDefaultValue)
-                    return paramInfo.DefaultValue;
-
-                // If we don't have a default value, check if we are allowed to be nullable
-                // If not, throw
-                if (!paramInfo.IsNullable)
-                    throw new ArgumentNullException(paramInfo.Name);
-            }
-
-            for (var i = 0; i < _propertyConverters.Count; i++)
-            {
-                var converter = _propertyConverters[i];
-
-                if (value is null)
-                    continue;
-
-                if (!converter.CanConvert(paramInfo.Type, value))
-                    continue;
-
-                return converter.Convert(paramInfo.Type, value);
-            }
-
-            //No converters
-            return paramInfo.HasDefaultValue ? paramInfo.DefaultValue : null;
-        }
+        throw new CommandRouterException(
+            $"No converter can convert '{value}' to {paramInfo.Type} for parameter '{paramInfo.Name}'");
     }
 }

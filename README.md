@@ -111,12 +111,12 @@ You can add your own parameter converters to support more complex models by impl
 ```c#
 public class JsonConverter : IPropertyConverter
 {
-    public bool CanConvert(Type propertyType, object value)
+    public bool CanConvert(Type propertyType, string value)
     {
         throw new NotImplementedException();
     }
 
-    public object Convert(Type propertyType, object value)
+    public object Convert(Type propertyType, string value)
     {
         throw new NotImplementedException();
     }

@@ -1,10 +1,9 @@
-namespace CommandRouter.Converters
-{
-    using System;
+namespace CommandRouter.Converters;
 
-    public interface IPropertyConverter
-    {
-        bool CanConvert(Type propertyType, object value);
-        object Convert(Type propertyType, object value);
-    }
+using System;
+
+public interface IPropertyConverter
+{
+    bool CanConvert(Type propertyType, string value);
+    object Convert(Type propertyType, string value);
 }
