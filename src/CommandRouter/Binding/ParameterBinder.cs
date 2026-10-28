@@ -26,17 +26,7 @@
             {
                 var pInfo = parameterInfos[i];
 
-                object? value;
-                if (parameters.Length == 0 || i >= parameters.Length)
-                    value = null;
-                else
-                    value = parameters[i];
-
-                if (i > parameters.Length)
-                {
-                    boundParams[i] = null;
-                    continue;
-                }
+                var value = i < parameters.Length ? parameters[i] : null;
 
                 boundParams[i] = ConvertParameter(pInfo, value);
             }

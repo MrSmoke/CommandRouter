@@ -1,5 +1,6 @@
 ﻿namespace CommandRouter.Tests.Binding
 {
+    using System;
     using System.Collections.Generic;
     using Moq;
     using Xunit;
@@ -31,6 +32,50 @@
 
             Assert.NotEmpty(objs);
             Assert.Equal("123", objs[0]);
+        }
+
+        [Fact]
+        public void BindParameters_FewerArgumentsThanParameters_UsesDefaultsForAllMissingParameters()
+        {
+            ParameterInfo[] parameterInfos =
+            [
+                new() { Name = "a", Type = typeof(string) },
+                new() { Name = "b", Type = typeof(int), DefaultValue = 5, HasDefaultValue = true },
+                new() { Name = "c", Type = typeof(int), DefaultValue = 7, HasDefaultValue = true }
+            ];
+
+            var binder = new ParameterBinder(new List<IPropertyConverter> { CreatePassThroughConverter() });
+
+            var objs = binder.BindParameters(parameterInfos, ["x"]);
+
+            Assert.Equal(3, objs.Length);
+            Assert.Equal("x", objs[0]);
+            Assert.Equal(5, objs[1]);
+            Assert.Equal(7, objs[2]);
+        }
+
+        [Fact]
+        public void BindParameters_MissingRequiredParameterAfterSuppliedArguments_Throws()
+        {
+            ParameterInfo[] parameterInfos =
+            [
+                new() { Name = "a", Type = typeof(string) },
+                new() { Name = "b", Type = typeof(int), DefaultValue = 5, HasDefaultValue = true },
+                new() { Name = "c", Type = typeof(int) }
+            ];
+
+            var binder = new ParameterBinder(new List<IPropertyConverter> { CreatePassThroughConverter() });
+
+            var ex = Assert.Throws<ArgumentNullException>(() => binder.BindParameters(parameterInfos, ["x"]));
+            Assert.Equal("c", ex.ParamName);
+        }
+
+        private static IPropertyConverter CreatePassThroughConverter()
+        {
+            var converter = new Mock<IPropertyConverter>();
+            converter.Setup(c => c.CanConvert(It.IsAny<Type>(), It.IsAny<object>())).Returns(true);
+            converter.Setup(c => c.Convert(It.IsAny<Type>(), It.IsAny<object>())).Returns((Type _, object v) => v);
+            return converter.Object;
         }
     }
 }
