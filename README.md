@@ -82,9 +82,11 @@ A class is a command class when it is:
 
 Every public instance method with a `[Command]` attribute is a command, including methods inherited from a base class.
 
-Command classes don't need to be registered with dependency injection. Each run creates one in a new service scope,
-with its constructor dependencies resolved from that scope. A registered command class uses its registration.
-Otherwise the class needs a single public constructor, or one marked `[ActivatorUtilitiesConstructor]`.
+Each run creates the command class in a new service scope, resolving its constructor dependencies from it. Command
+classes don't need to be registered with dependency injection.
+
+- An unregistered class needs a single public constructor, or one marked `[ActivatorUtilitiesConstructor]`.
+- A registered class uses its registration, which should be transient because `Context` is set on the instance.
 
 ```c#
 public class UserCommand(IUserService users) : Command
@@ -116,8 +118,8 @@ public class UserCommand : Command
 ```
 
 - `[Command]` with no name is the same as `[Command("")]`: the prefix itself, or the root command without a prefix.
-- The root command (`""`) runs when nothing else matches, with all the input as arguments. Give it a `params`
-  parameter to accept any input.
+- The root command (`""`) runs when nothing else matches, with all the input as arguments, so it usually needs a
+  `params` parameter.
 - Whitespace around and between words doesn't matter, so `[CommandPrefix("user ")]` with `[Command(" add")]`
   registers `user add`.
 - Names are case-sensitive and can't contain quotes.
@@ -126,8 +128,7 @@ public class UserCommand : Command
 
 ### Inherited commands
 
-Commands on a base class are registered for each derived command class, with the derived class's prefixes and any
-on the base class.
+Commands on a base class are registered for each derived command class, using the prefixes of both.
 
 ```c#
 public abstract class StatusCommandBase : Command
@@ -218,14 +219,12 @@ Arguments are separated by whitespace and passed to the method's parameters in o
   `user "add"` runs `user` with the argument `add`.
 - Spaces, tabs and newlines all separate arguments, except inside quotes.
 - A missing argument uses the parameter's default value, or `null` for a nullable parameter. Otherwise
-  `ParameterBindingException` is thrown. In code without nullable reference types enabled, every reference type
-  parameter counts as nullable.
+  `ParameterBindingException` is thrown. Without nullable reference types enabled, every reference type parameter is
+  nullable.
 - Extra arguments throw `ParameterBindingException`. To accept any number, end the method with a `params` array,
   such as `params string[] words`. It receives the remaining arguments, each converted to the element type.
 
 ### Supported types
-
-Built in:
 
 - `string`, `bool`, `char` and the numeric types
 - `object`, which receives the argument as a string
