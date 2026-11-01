@@ -42,10 +42,16 @@ public sealed class SystemTypeConverter : IPropertyConverter
     {
         var result = Enum.Parse(enumType, value, true);
 
-        // Combined flags aren't individually defined
-        if (!enumType.IsDefined(typeof(FlagsAttribute), false) && !Enum.IsDefined(enumType, result))
+        var isDefined = enumType.IsDefined(typeof(FlagsAttribute), false)
+            // Flags with an undefined bit format as a number rather than member names
+            ? !IsNumber(result.ToString()!)
+            : Enum.IsDefined(enumType, result);
+
+        if (!isDefined)
             throw new ArgumentException($"'{value}' is not a defined value of {enumType}", nameof(value));
 
         return result;
     }
+
+    private static bool IsNumber(string text) => text.Length > 0 && (char.IsDigit(text[0]) || text[0] == '-');
 }

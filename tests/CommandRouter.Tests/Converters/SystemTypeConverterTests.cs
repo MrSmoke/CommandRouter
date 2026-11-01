@@ -49,6 +49,14 @@ public class SystemTypeConverterTests
         Assert.Equal(FileAccess.ReadWrite, _converter.Convert(typeof(FileAccess), "3"));
     }
 
+    [Theory]
+    [InlineData("999")]
+    [InlineData("4")]
+    public void Convert_FlagsEnumUndefinedBits_Throws(string value)
+    {
+        Assert.Throws<ArgumentException>(() => _converter.Convert(typeof(FileAccess), value));
+    }
+
     [Fact]
     public void Convert_Guid_ParsesGuid()
     {
