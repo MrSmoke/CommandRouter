@@ -149,6 +149,44 @@ public class DefaultCommandSelectorTests
         Assert.False(result);
     }
 
+    [Theory]
+    [InlineData("user \"add\"", "user", 1)]
+    [InlineData("user add \"bob\"", "user add", 2)]
+    [InlineData("user \"add\" bob", "user", 1)]
+    public void SelectCommand_QuotedToken_IsNeverPartOfCommandName(string input, string expectedCommand,
+        int expectedArgumentStart)
+    {
+        var table = CreateTable("user", "user add");
+
+        var result = new DefaultCommandSelector().TrySelect(Tokenize(input), table, out var match);
+
+        Assert.True(result);
+        Assert.Equal(expectedCommand, match.Method.Command);
+        Assert.Equal(expectedArgumentStart, match.ArgumentStart);
+    }
+
+    [Theory]
+    [InlineData("\"user add\" bob")]
+    [InlineData("\"\" x")]
+    public void SelectCommand_QuotedFirstToken_FallsBackToRootRoute(string input)
+    {
+        var table = CreateTable("", "user add");
+
+        var result = new DefaultCommandSelector().TrySelect(Tokenize(input), table, out var match);
+
+        Assert.True(result);
+        Assert.Equal("", match.Method.Command);
+        Assert.Equal(0, match.ArgumentStart);
+    }
+
+    [Fact]
+    public void SelectCommand_QuotedFirstToken_NoRootRoute_ReturnsFalse()
+    {
+        var table = CreateTable("user add");
+
+        Assert.False(new DefaultCommandSelector().TrySelect(Tokenize("\"user add\" bob"), table, out _));
+    }
+
     [Fact]
     public void SelectCommand_CommandTable_FallsBackToRootRoute()
     {

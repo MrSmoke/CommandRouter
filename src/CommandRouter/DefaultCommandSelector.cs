@@ -7,7 +7,8 @@ using Routing;
 internal class DefaultCommandSelector : ICommandSelector
 {
     /// <summary>
-    /// Selects the command matching the most leading tokens, falling back to the root command
+    /// Selects the command matching the most leading tokens, falling back to the root command. Quoted tokens are
+    /// always arguments
     /// </summary>
     public bool TrySelect(TokenizedCommand command, ICommandTable commandTable, out CommandMatch match)
     {
@@ -16,7 +17,11 @@ internal class DefaultCommandSelector : ICommandSelector
 
         var tokens = command.Tokens;
 
-        for (var index = tokens.Count; index > -1; --index)
+        var nameLength = 0;
+        while (nameLength < tokens.Count && !tokens[nameLength].IsQuoted)
+            nameLength++;
+
+        for (var index = nameLength; index > -1; --index)
         {
             //index 0 is the root/default route
             var cmd = index == 0

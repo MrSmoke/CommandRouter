@@ -219,6 +219,8 @@ Arguments are separated by spaces and passed to the method's parameters in order
 
 - Use double quotes for an argument containing spaces: `say "hello world"`. Text inside quotes is kept exactly as
   written. Quotes can't be escaped.
+- Quoted text is always an argument, never part of the command name. With `user` and `user add` registered,
+  `user "add"` runs `user` with the argument `add`.
 - Only spaces separate arguments. Tabs and newlines are part of an argument.
 - A missing argument uses the parameter's default value, or `null` for a nullable parameter. Otherwise
   `ParameterBindingException` is thrown. In code without nullable reference types enabled, every reference type
