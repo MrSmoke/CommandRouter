@@ -1,79 +1,106 @@
-﻿namespace CommandRouter.Binding
+﻿namespace CommandRouter.Binding;
+
+using System;
+using Converters;
+using Exceptions;
+using Extensions;
+using Microsoft.Extensions.Options;
+
+internal sealed class ParameterBinder
 {
-    using System;
-    using System.Collections.Generic;
-    using Converters;
+    private readonly IPropertyConverter[] _propertyConverters;
 
-    internal class ParameterBinder
+    /// <summary>
+    /// Uses the configured converters, falling back to <see cref="SystemTypeConverter"/>
+    /// </summary>
+    public ParameterBinder(IOptions<CommandRouterOptions> options)
     {
-        private readonly IList<IPropertyConverter> _propertyConverters;
+        _propertyConverters = [..options.Value.PropertyConverters, new SystemTypeConverter()];
+    }
 
-        internal ParameterBinder(IList<IPropertyConverter> propertyConverters)
+    internal object?[] BindParameters(ParameterInfo[] parameterInfos, string[] parameters)
+    {
+        var boundParams = new object?[parameterInfos.Length];
+
+        for (var i = 0; i < parameterInfos.Length; i++)
         {
-            _propertyConverters = propertyConverters;
-        }
+            var pInfo = parameterInfos[i];
 
-        internal void AddConverter(IPropertyConverter propertyConverter)
-        {
-            _propertyConverters.Add(propertyConverter);
-        }
-
-        internal object?[] BindParameters(ParameterInfo[] parameterInfos, object[] parameters)
-        {
-            var boundParams = new object?[parameterInfos.Length];
-
-            for (var i = 0; i < parameterInfos.Length; i++)
+            // A params array is always last and takes every remaining argument
+            if (pInfo.IsParams)
             {
-                var pInfo = parameterInfos[i];
-
-                object? value;
-                if (parameters.Length == 0 || i >= parameters.Length)
-                    value = null;
-                else
-                    value = parameters[i];
-
-                if (i > parameters.Length)
-                {
-                    boundParams[i] = null;
-                    continue;
-                }
-
-                boundParams[i] = ConvertParameter(pInfo, value);
+                boundParams[i] = BindParamsArray(pInfo, parameters, i);
+                return boundParams;
             }
 
-            return boundParams;
+            var value = i < parameters.Length ? parameters[i] : null;
+
+            boundParams[i] = ConvertParameter(pInfo, value);
         }
 
-        private object? ConvertParameter(ParameterInfo paramInfo, object? value)
+        if (parameters.Length > parameterInfos.Length)
         {
-            // Nullable support
-            if (value is null)
-            {
-                // When the value is null and we have a default value, use that
-                if (paramInfo.HasDefaultValue)
-                    return paramInfo.DefaultValue;
+            throw new ParameterBindingException(
+                $"Too many arguments, expected at most {parameterInfos.Length}", null,
+                parameters[parameterInfos.Length]);
+        }
 
-                // If we don't have a default value, check if we are allowed to be nullable
-                // If not, throw
-                if (!paramInfo.IsNullable)
-                    throw new ArgumentNullException(paramInfo.Name);
+        return boundParams;
+    }
+
+    private Array BindParamsArray(ParameterInfo paramInfo, string[] parameters, int start)
+    {
+        var elementInfo = new ParameterInfo { Name = paramInfo.Name, Type = paramInfo.Type.GetElementType()! };
+        var array = Array.CreateInstance(elementInfo.Type, Math.Max(parameters.Length - start, 0));
+
+        for (var i = 0; i < array.Length; i++)
+            array.SetValue(ConvertParameter(elementInfo, parameters[start + i]), i);
+
+        return array;
+    }
+
+    private object? ConvertParameter(ParameterInfo paramInfo, string? value)
+    {
+        // Nullable support
+        if (value is null)
+        {
+            // When the value is null and we have a default value, use that
+            if (paramInfo.HasDefaultValue)
+                return paramInfo.DefaultValue;
+
+            // If we don't have a default value, check if we are allowed to be nullable
+            // If not, throw
+            if (!paramInfo.IsNullable)
+            {
+                throw new ParameterBindingException(
+                    $"Missing value for parameter '{paramInfo.Name}'", paramInfo.Name, null);
             }
 
-            for (var i = 0; i < _propertyConverters.Count; i++)
+            // Nullable parameter without a supplied value
+            return null;
+        }
+
+        for (var i = 0; i < _propertyConverters.Length; i++)
+        {
+            var converter = _propertyConverters[i];
+
+            if (!converter.CanConvert(paramInfo.Type, value))
+                continue;
+
+            try
             {
-                var converter = _propertyConverters[i];
-
-                if (value is null)
-                    continue;
-
-                if (!converter.CanConvert(paramInfo.Type, value))
-                    continue;
-
                 return converter.Convert(paramInfo.Type, value);
             }
-
-            //No converters
-            return paramInfo.HasDefaultValue ? paramInfo.DefaultValue : null;
+            catch (Exception ex) when (ex is not ParameterBindingException)
+            {
+                throw new ParameterBindingException(
+                    $"Unable to convert '{value}' to {paramInfo.Type} for parameter '{paramInfo.Name}'",
+                    paramInfo.Name, value, ex);
+            }
         }
+
+        throw new ParameterBindingException(
+            $"No converter can convert '{value}' to {paramInfo.Type} for parameter '{paramInfo.Name}'",
+            paramInfo.Name, value);
     }
 }

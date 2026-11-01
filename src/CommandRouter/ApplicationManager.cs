@@ -1,16 +1,21 @@
-﻿namespace CommandRouter
+﻿namespace CommandRouter;
+
+using System.Collections.Generic;
+using System.Reflection;
+using Commands;
+
+internal sealed class ApplicationManager
 {
-    using System.Collections.Generic;
-    using System.Reflection;
-    using Commands;
+    internal readonly IList<Assembly> Assemblies = new List<Assembly>();
 
-    public class ApplicationManager
+    /// <summary>
+    /// Scans <see cref="Assemblies"/> for command classes
+    /// </summary>
+    internal CommandFeature GetCommandFeature()
     {
-        internal readonly IList<Assembly> Assemblies = new List<Assembly>();
+        var feature = new CommandFeature();
+        DefaultCommandFeatureProvider.PopulateFeature(Assemblies, feature);
 
-        internal void PopulateFeature(CommandFeature feature)
-        {
-            DefaultCommandFeatureProvider.PopulateFeature(Assemblies, feature);
-        }
+        return feature;
     }
 }

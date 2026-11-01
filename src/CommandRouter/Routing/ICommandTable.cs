@@ -1,11 +1,5 @@
-namespace CommandRouter.Routing
-{
-    using System;
-    using System.Collections.Generic;
-    using Results;
+namespace CommandRouter.Routing;
 
-    public interface ICommandTable : IReadOnlyDictionary<string, CommandMethod>
-    {
-        void AddCommand(string command, Func<object?[], CommandContext, ICommandResult> action);
-    }
-}
+using System.Collections.Generic;
+
+public interface ICommandTable : IReadOnlyDictionary<string, CommandMethod>;

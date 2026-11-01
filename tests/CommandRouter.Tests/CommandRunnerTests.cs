@@ -1,96 +1,89 @@
-﻿namespace CommandRouter.Tests
+﻿namespace CommandRouter.Tests;
+
+using System;
+using System.Threading.Tasks;
+using Exceptions;
+using Moq;
+using Results;
+using Routing;
+using Xunit;
+
+public class CommandRunnerTests
 {
-    using System.Threading.Tasks;
-    using Moq;
-    using Routing;
-    using Converters;
-    using Xunit;
-    using System;
-    using System.Collections.Generic;
-    using Activation;
-    using Attributes;
-    using CommandRouter.Binding;
-    using Commands;
-    using Microsoft.Extensions.DependencyInjection;
-    using Results;
-
-    public class CommandRunnerTests
+    [Fact]
+    public async Task RunAsync_HandlesExceptions()
     {
-        [Fact]
-        public async Task RunAsync_HandlesExceptions()
-        {
-            var commandMethod = new CommandMethod(
-                command: "test",
-                action: (_, _) => Task.FromException(new TestException()),
-                parameters: []
-            );
+        var commandMethod = new CommandMethod(
+            command: "test",
+            action: (_, _) => ValueTask.FromException<ICommandResult>(new TestException()),
+            parameters: []
+        );
 
-            var commandTable = new Mock<ICommandTable>(MockBehavior.Strict);
-            commandTable.Setup(c => c.TryGetValue("test", out commandMethod)).Returns(true);
+        var commandTable = new Mock<ICommandTable>(MockBehavior.Strict);
+        commandTable.Setup(c => c.TryGetValue("test", out commandMethod)).Returns(true);
 
-            object[]? outExtra = null;
-            var commandSelector = new Mock<ICommandSelector>(MockBehavior.Strict);
-            commandSelector.Setup(c => c.TrySelectCommand("test", commandTable.Object, out commandMethod, out outExtra)).Returns(true);
+        var outMatch = new CommandMatch(commandMethod, 1);
+        var commandSelector = new Mock<ICommandSelector>(MockBehavior.Strict);
+        commandSelector.Setup(c => c.TrySelect(It.Is<TokenisedCommand>(t => t.Tokens.Count == 1 && t.Tokens[0].Value == "test"), commandTable.Object, out outMatch)).Returns(true);
 
-            var pBinder = new ParameterBinder([]);
+        var pBinder = TestBinder.Create();
 
-            var commandRunner = new CommandRunner(commandTable.Object, commandSelector.Object, pBinder);
+        var commandRunner = new CommandRunner(commandTable.Object, new DefaultCommandTokeniser(), commandSelector.Object, pBinder);
 
-            await Assert.ThrowsAsync<TestException>(() => commandRunner.RunAsync("test"));
-        }
-
-        [Fact]
-        public async Task RunAsync_CanResolveScopedServices()
-        {
-            var services = new ServiceCollection();
-
-            services.AddScoped<DisposableService>();
-            services.AddTransient<TestCommand>();
-
-            var activator = new DefaultCommandActivator(services.BuildServiceProvider());
-
-            var commandTable = new CommandTable(activator);
-
-            commandTable.RegisterCommands<TestCommand>();
-
-            var runner = new CommandRunner(commandTable, new DefaultCommandSelector(),
-                new ParameterBinder(new List<IPropertyConverter>()));
-
-            // Test sync
-            await runner.RunAsync("test");
-
-            // Test await async
-            await runner.RunAsync("test-async");
-        }
-
-        private class DisposableService : IDisposable
-        {
-            public Action? OnDispose { get; set; }
-
-            public void Dispose()
-            {
-                OnDispose?.Invoke();
-            }
-        }
-
-#pragma warning disable CA1822
-        private class TestCommand : Command
-        {
-            [Command("test")]
-            public void Hello()
-            {
-            }
-
-            [Command("test-async")]
-            public async Task<ICommandResult> HelloAsync()
-            {
-                await Task.Delay(1000);
-
-                return new StringResult("hello");
-            }
-        }
-#pragma warning restore CA1822
-
-        private class TestException : Exception;
+        await Assert.ThrowsAsync<TestException>(() => commandRunner.RunAsync("test"));
     }
+
+    [Fact]
+    public async Task RunAsync_UnterminatedQuote_ThrowsInvalidTokenException()
+    {
+        var commandMethod = new CommandMethod(
+            command: "say",
+            action: (_, _) => new ValueTask<ICommandResult>(EmptyResult.Empty),
+            parameters: []
+        );
+
+        var commandTable = new Mock<ICommandTable>();
+        commandTable.Setup(c => c.TryGetValue("say", out commandMethod)).Returns(true);
+
+        var commandRunner = new CommandRunner(commandTable.Object, new DefaultCommandTokeniser(), new DefaultCommandSelector(), TestBinder.Create());
+
+        var ex = await Assert.ThrowsAsync<InvalidTokenException>(() => commandRunner.RunAsync("say \"hello"));
+
+        Assert.Equal(4, ex.Position);
+    }
+
+    [Fact]
+    public async Task RunAsync_UsesCustomTokeniser()
+    {
+        var commandMethod = new CommandMethod(
+            command: "say",
+            action: (_, _) => new ValueTask<ICommandResult>(EmptyResult.Empty),
+            parameters: []
+        );
+
+        var commandTable = new Mock<ICommandTable>();
+        commandTable.Setup(c => c.TryGetValue("say", out commandMethod)).Returns(true);
+
+        var custom = new TokenisedCommand("say", [new CommandToken("say", 0, 3, false)]);
+        var tokeniser = new Mock<ICommandTokeniser>();
+        tokeniser.Setup(t => t.TryTokenise("anything", out custom, out It.Ref<int>.IsAny)).Returns(true);
+
+        var commandRunner = new CommandRunner(commandTable.Object, tokeniser.Object, new DefaultCommandSelector(), TestBinder.Create());
+
+        await commandRunner.RunAsync("anything");
+
+        tokeniser.Verify(t => t.TryTokenise("anything", out custom, out It.Ref<int>.IsAny), Times.Once);
+    }
+
+    [Fact]
+    public async Task RunAsync_UnknownCommand_ThrowsCommandNotFoundException()
+    {
+        var commandTable = new Mock<ICommandTable>();
+
+        var commandRunner = new CommandRunner(commandTable.Object, new DefaultCommandTokeniser(), new DefaultCommandSelector(), TestBinder.Create());
+
+        await Assert.ThrowsAsync<CommandNotFoundException>(() => commandRunner.RunAsync("nope"));
+    }
+
+    private class TestException : Exception;
 }

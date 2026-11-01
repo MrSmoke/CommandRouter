@@ -1,186 +1,256 @@
-namespace CommandRouter.Routing
+namespace CommandRouter.Routing;
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
+using Activation;
+using Attributes;
+using Commands;
+using Exceptions;
+using Results;
+using ParameterInfo = Binding.ParameterInfo;
+
+internal sealed class CommandTable : ICommandTable
 {
-    using System;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Diagnostics.CodeAnalysis;
-    using System.Linq;
-    using System.Reflection;
-    using System.Threading.Tasks;
-    using Activation;
-    using Attributes;
-    using Commands;
-    using Results;
-    using ParameterInfo = Binding.ParameterInfo;
+    private readonly ICommandActivator _commandActivator;
+    private readonly ICommandTokeniser _commandTokeniser;
+    private readonly Dictionary<string, CommandMethod> _methodTable = new();
 
-    public class CommandTable : ICommandTable
+    public CommandTable(ICommandActivator commandActivator, ICommandTokeniser commandTokeniser,
+        ApplicationManager applicationManager)
     {
-        private readonly ICommandActivator _commandActivator;
-        private readonly Dictionary<string, CommandMethod> _methodTable = new();
-        private readonly NullabilityInfoContext _nullabilityContext = new();
+        _commandActivator = commandActivator;
+        _commandTokeniser = commandTokeniser;
 
-        public CommandTable(ICommandActivator commandActivator)
+        LoadCommands(applicationManager);
+    }
+
+    /// <summary>
+    /// Adds the commands declared on <typeparamref name="T"/>. Not thread-safe, so only call this at startup before
+    /// any commands run
+    /// </summary>
+    internal void RegisterCommands<T>() where T : Command
+    {
+        LoadCommands(typeof(T));
+    }
+
+    public IEnumerator<KeyValuePair<string, CommandMethod>> GetEnumerator()
+    {
+        return _methodTable.GetEnumerator();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
+    }
+
+    public int Count => _methodTable.Count;
+
+    public bool ContainsKey(string key)
+    {
+        return _methodTable.ContainsKey(key);
+    }
+
+    public bool TryGetValue(string key, [NotNullWhen(true)] out CommandMethod? value)
+    {
+        return _methodTable.TryGetValue(key, out value);
+    }
+
+    public CommandMethod this[string key] => _methodTable[key];
+
+    public IEnumerable<string> Keys => _methodTable.Keys;
+    public IEnumerable<CommandMethod> Values => _methodTable.Values;
+
+    private void LoadCommands(ApplicationManager applicationManager)
+    {
+        foreach (var type in applicationManager.GetCommandFeature().Commands)
+            LoadCommands(type.AsType());
+    }
+
+    private void LoadCommands(Type type)
+    {
+        var typeInfo = type.GetTypeInfo();
+
+        var methods = typeInfo.GetMethods(BindingFlags.Public | BindingFlags.Instance);
+        var prefixes = typeInfo.GetCustomAttributes<CommandPrefixAttribute>().ToArray();
+        var nullabilityContext = new NullabilityInfoContext();
+
+        foreach (var method in methods)
         {
-            _commandActivator = commandActivator;
-        }
+            var attributes = method.GetCustomAttributes<CommandAttribute>().ToArray();
+            if (attributes.Length == 0)
+                continue;
 
-        public CommandTable(ICommandActivator commandActivator, ApplicationManager applicationManager) :
-            this(commandActivator)
-        {
-            LoadCommands(applicationManager);
-        }
+            // Shared by every command string on this method
+            var resultAdapter = CreateResultAdapter(method.ReturnType);
+            var parameters = CreateParameters(method, nullabilityContext);
+            var action = resultAdapter == null ? null : CreateAction(type, method, resultAdapter);
 
-        public void AddCommand(string command, Func<object?[], CommandContext, ICommandResult> action)
-        {
-            _methodTable.Add(command, new CommandMethod(command, action, []));
-        }
-
-        public void RegisterCommands<T>() where T : Command
-        {
-            LoadCommands(typeof(T));
-        }
-
-        public IEnumerator<KeyValuePair<string, CommandMethod>> GetEnumerator()
-        {
-            return _methodTable.GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        public int Count => _methodTable.Count;
-        public bool ContainsKey(string key)
-        {
-            return _methodTable.ContainsKey(key);
-        }
-
-        public bool TryGetValue(string key, [NotNullWhen(true)] out CommandMethod? value)
-        {
-            return _methodTable.TryGetValue(key, out value);
-        }
-
-        public CommandMethod this[string key] => _methodTable[key];
-
-        public IEnumerable<string> Keys => _methodTable.Keys;
-        public IEnumerable<CommandMethod> Values => _methodTable.Values;
-
-        internal void LoadCommands(ApplicationManager applicationManager)
-        {
-            var commandFeature = new CommandFeature();
-            DefaultCommandFeatureProvider.PopulateFeature(applicationManager.Assemblies, commandFeature);
-
-            foreach (var type in commandFeature.Commands)
-                LoadCommands(type.AsType());
-        }
-
-        internal void LoadCommands(Type type)
-        {
-            var typeInfo = type.GetTypeInfo();
-
-            var methods = typeInfo.GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance);
-            var prefixes = typeInfo.GetCustomAttributes<CommandPrefixAttribute>().ToArray();
-
-            foreach (var method in methods)
+            foreach (var attr in attributes)
             {
-                foreach (var attr in method.GetCustomAttributes<CommandAttribute>())
+                foreach (var cmdStr in GetCommandStrings(attr, prefixes))
                 {
-                    var action = MethodInvoker(type, method);
+                    if (action == null)
+                        throw new UnsupportedReturnTypeException(cmdStr, method.ReturnType);
 
-                    foreach (var cmdStr in GetCommandStrings(attr, prefixes))
-                    {
-                        if (_methodTable.ContainsKey(cmdStr))
-                            throw new Exception($"Command '{cmdStr}' has already been registered");
-
-                        _methodTable.Add(cmdStr, new CommandMethod(
-                            command: cmdStr,
-                            action: action,
-                            parameters: method.GetParameters().Select(p =>
-                            {
-                                var nullableInfo = _nullabilityContext.Create(p);
-
-                                return new ParameterInfo
-                                {
-                                    Name = p.Name,
-                                    Type = p.ParameterType,
-                                    DefaultValue = p.DefaultValue,
-                                    HasDefaultValue = p.HasDefaultValue,
-                                    IsNullable = nullableInfo.WriteState
-                                        is NullabilityState.Nullable
-                                        or NullabilityState.Unknown
-                                };
-                            }).ToArray()
-                        ));
-                    }
+                    AddMethod(new CommandMethod(cmdStr, action, parameters));
                 }
             }
         }
+    }
 
-        private Func<object?[], CommandContext, object?> MethodInvoker(Type classType, MethodBase methodInfo)
+    private void AddMethod(CommandMethod method)
+    {
+        if (!_methodTable.TryAdd(method.Command, method))
+            throw new CommandRouterException($"Command '{method.Command}' has already been registered");
+    }
+
+    /// <summary>
+    /// Splits <paramref name="command"/> with the same tokeniser as the input, so names and input always match
+    /// </summary>
+    private string ToCommandName(string command)
+    {
+        if (!_commandTokeniser.TryTokenise(command, out var tokenised, out _))
+            throw new CommandRouterException($"Command '{command}' has an unterminated quote");
+
+        // Quoted tokens are always arguments, so a name containing one could never match
+        foreach (var token in tokenised.Tokens)
         {
-            return (objs, context) =>
+            if (token.IsQuoted)
+                throw new CommandRouterException($"Command '{command}' can't contain quotes");
+        }
+
+        return tokenised.GetCommandName(tokenised.Tokens.Count);
+    }
+
+    private static ParameterInfo[] CreateParameters(MethodInfo method, NullabilityInfoContext nullabilityContext)
+    {
+        var reflectionParameters = method.GetParameters();
+        var parameters = new ParameterInfo[reflectionParameters.Length];
+
+        for (var i = 0; i < reflectionParameters.Length; i++)
+        {
+            var p = reflectionParameters[i];
+            var nullableInfo = nullabilityContext.Create(p);
+
+            parameters[i] = new ParameterInfo
             {
-                var scope = _commandActivator.CreateScope();
-                object? result = null;
-
-                try
-                {
-                    if (scope.CommandActivator.Create(classType) is not Command command)
-                        throw new Exception("Oh o");
-
-                    command.Context = context;
-
-                    result = methodInfo.Invoke(command, objs);
-
-                    return result;
-                }
-                finally
-                {
-                    // Dispose of our scope
-                    if (result is Task task)
-                        task.ContinueWith(_ => { scope.Dispose(); });
-                    else
-                        scope.Dispose();
-                }
+                Name = p.Name,
+                Type = p.ParameterType,
+                DefaultValue = p.DefaultValue,
+                HasDefaultValue = p.HasDefaultValue,
+                IsNullable = nullableInfo.WriteState
+                    is NullabilityState.Nullable
+                    or NullabilityState.Unknown,
+                IsParams = p.IsDefined(typeof(ParamArrayAttribute), false)
             };
         }
 
-        private static IEnumerable<string> GetCommandStrings(CommandAttribute attribute, CommandPrefixAttribute[] prefixes)
+        return parameters;
+    }
+
+    private Func<object?[], CommandContext, ValueTask<ICommandResult>> CreateAction(Type classType,
+        MethodInfo method, Func<object?, ValueTask<ICommandResult>> resultAdapter)
+    {
+        var invoker = MethodInvoker.Create(method);
+
+        return async (args, context) =>
         {
-            //TODO: Cleanup
-            if (prefixes.Length == 0)
+            var scope = _commandActivator.CreateScope();
+
+            // Disposed after async work completes
+            await using var _ = scope.ConfigureAwait(false);
+
+            if (scope.CommandActivator.Create(classType) is not Command command)
             {
-                var cmd = Parse(attribute, null);
-                if (cmd != null)
-                    yield return cmd.Trim();
+                throw new CommandRouterException(
+                    $"Unable to resolve command class '{classType.FullName}'. " +
+                    "The activator must return an instance that derives from Command.");
             }
-            else
+
+            command.Context = context;
+
+            var result = invoker.Invoke(command, args.AsSpan());
+
+            return await resultAdapter(result).ConfigureAwait(false);
+        };
+    }
+
+    private static Func<object?, ValueTask<ICommandResult>>? CreateResultAdapter(Type returnType)
+    {
+        if (returnType == typeof(void))
+            return static _ => new ValueTask<ICommandResult>(EmptyResult.Empty);
+
+        if (typeof(ICommandResult).IsAssignableFrom(returnType))
+            return static result => new ValueTask<ICommandResult>((ICommandResult?) result ?? EmptyResult.Empty);
+
+        if (returnType == typeof(Task))
+        {
+            return static async result =>
             {
-                foreach (var prefix in prefixes)
-                {
-                    var cmd = Parse(attribute, prefix);
-                    if (cmd != null)
-                        yield return cmd.Trim();
-                }
-            }
+                await ((Task) result!).ConfigureAwait(false);
+                return EmptyResult.Empty;
+            };
         }
 
-        private static string? Parse(CommandAttribute attribute, CommandPrefixAttribute? prefix)
+        if (returnType == typeof(ValueTask))
         {
-            var cmd = attribute?.Command;
-            var pre = prefix?.Command;
+            return static async result =>
+            {
+                await ((ValueTask) result!).ConfigureAwait(false);
+                return EmptyResult.Empty;
+            };
+        }
 
-            if (cmd == null && pre == null)
+        if (returnType.IsGenericType)
+        {
+            var definition = returnType.GetGenericTypeDefinition();
+            var resultType = returnType.GetGenericArguments()[0];
+
+            if (resultType.IsValueType || !typeof(ICommandResult).IsAssignableFrom(resultType))
                 return null;
 
-            if (cmd == null)
-                return pre;
+            if (definition == typeof(Task<>))
+                return CreateGenericAdapter(nameof(AwaitTask), resultType);
 
-            if (pre == null)
-                return cmd;
-
-            return pre + " " + cmd;
+            if (definition == typeof(ValueTask<>))
+                return CreateGenericAdapter(nameof(AwaitValueTask), resultType);
         }
+
+        return null;
+    }
+
+    private static Func<object?, ValueTask<ICommandResult>> CreateGenericAdapter(string methodName, Type resultType)
+    {
+        return typeof(CommandTable)
+            .GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static)!
+            .MakeGenericMethod(resultType)
+            .CreateDelegate<Func<object?, ValueTask<ICommandResult>>>();
+    }
+
+    private static async ValueTask<ICommandResult> AwaitTask<T>(object? task) where T : class, ICommandResult
+    {
+        ICommandResult? result = await ((Task<T>) task!).ConfigureAwait(false);
+        return result ?? EmptyResult.Empty;
+    }
+
+    private static async ValueTask<ICommandResult> AwaitValueTask<T>(object? task) where T : class, ICommandResult
+    {
+        ICommandResult? result = await ((ValueTask<T>) task!).ConfigureAwait(false);
+        return result ?? EmptyResult.Empty;
+    }
+
+    private IEnumerable<string> GetCommandStrings(CommandAttribute attribute, CommandPrefixAttribute[] prefixes)
+    {
+        var command = attribute.Command ?? "";
+
+        if (prefixes.Length == 0)
+            return [ToCommandName(command)];
+
+        return prefixes.Select(prefix => ToCommandName(prefix.Command + " " + command));
     }
 }

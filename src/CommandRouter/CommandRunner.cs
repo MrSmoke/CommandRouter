@@ -1,71 +1,56 @@
-﻿namespace CommandRouter
+﻿namespace CommandRouter;
+
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Binding;
+using Exceptions;
+using Results;
+using Routing;
+
+internal sealed class CommandRunner(
+    ICommandTable commandTable,
+    ICommandTokeniser commandTokeniser,
+    ICommandSelector commandSelector,
+    ParameterBinder parameterBinder)
+    : ICommandRunner
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Threading.Tasks;
-    using Binding;
-    using Exceptions;
-    using Results;
-    using Routing;
-
-    internal class CommandRunner : ICommandRunner
+    public async Task<ICommandResult> RunAsync(string command,
+        IReadOnlyDictionary<string, object>? contextItems,
+        CancellationToken cancellationToken)
     {
-        private readonly ICommandTable _commandTable;
-        private readonly ICommandSelector _commandSelector;
-        private readonly ParameterBinder _parameterBinder;
+        ArgumentNullException.ThrowIfNull(command);
+        cancellationToken.ThrowIfCancellationRequested();
 
-        public CommandRunner(ICommandTable commandTable, ICommandSelector commandSelector, ParameterBinder parameterBinder)
+        if (!commandTokeniser.TryTokenise(command, out var tokenisedCommand, out var errorPosition))
         {
-            _commandTable = commandTable;
-            _commandSelector = commandSelector;
-            _parameterBinder = parameterBinder;
+            throw new InvalidTokenException(
+                $"Invalid token starting at position {errorPosition}",
+                errorPosition);
         }
 
-        public Task<ICommandResult> RunAsync(string command)
+        if (!commandSelector.TrySelect(tokenisedCommand, commandTable, out var match))
+            throw new CommandNotFoundException(command);
+
+        var method = match.Method;
+        var args = tokenisedCommand.GetArguments(match.ArgumentStart);
+
+        var parameters = parameterBinder.BindParameters(method.Parameters, args);
+
+        var context = new CommandContext
         {
-            return RunAsync(command, null);
+            Arguments = args,
+            CancellationToken = cancellationToken
+        };
+
+        //add extra items
+        if (contextItems != null)
+        {
+            foreach (var conItems in contextItems)
+                context.Items.TryAdd(conItems.Key, conItems.Value);
         }
 
-        public async Task<ICommandResult> RunAsync(string command, Dictionary<string, object>? contextItems)
-        {
-            ArgumentNullException.ThrowIfNull(command);
-
-            if (!_commandSelector.TrySelectCommand(command, _commandTable, out var method, out var args))
-                throw new CommandNotFoundException(command);
-
-            var parameters = _parameterBinder.BindParameters(method.Parameters, args);
-
-            var context = new CommandContext
-            {
-                Arguments = args
-            };
-
-            //add extra items
-            if (contextItems != null)
-            {
-                foreach (var conItems in contextItems)
-                {
-                    if (!context.Items.ContainsKey(conItems.Key))
-                        context.Items.Add(conItems.Key, conItems.Value);
-                }
-            }
-
-            var result = method.Action(parameters, context);
-
-            switch (result)
-            {
-                case ICommandResult commandResult:
-                    return commandResult;
-                case Task<ICommandResult> taskCommandResult:
-                    return await taskCommandResult.ConfigureAwait(false);
-                case Task taskResult:
-                    await taskResult;
-                    return EmptyResult.Empty;
-                case null:
-                    return EmptyResult.Empty;
-                default:
-                    throw new CommandRouterException("Failed to run command");
-            }
-        }
+        return await method.Action(parameters, context).ConfigureAwait(false);
     }
 }

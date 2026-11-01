@@ -1,10 +1,9 @@
-﻿namespace CommandRouter.Activation
-{
-    using System;
+﻿namespace CommandRouter.Activation;
 
-    public interface ICommandActivator
-    {
-        object? Create(Type type);
-        ICommandActivatorScope CreateScope();
-    }
+using System;
+
+public interface ICommandActivator
+{
+    object? Create(Type type);
+    ICommandActivatorScope CreateScope();
 }

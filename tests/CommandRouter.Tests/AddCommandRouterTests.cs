@@ -1,0 +1,157 @@
+namespace CommandRouter.Tests;
+
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using Routing;
+using Xunit;
+
+public class AddCommandRouterTests
+{
+    private static readonly System.Reflection.Assembly TestAssembly = typeof(AddCommandRouterTests).Assembly;
+
+    [Fact]
+    public void AddCommandRouter_UserRegisteredSelectorBeforeCall_IsNotOverridden()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ICommandSelector, CustomSelector>();
+
+        services.AddCommandRouter(TestAssembly);
+
+        using var provider = services.BuildServiceProvider();
+        Assert.IsType<CustomSelector>(provider.GetRequiredService<ICommandSelector>());
+    }
+
+    [Fact]
+    public void AddCommandRouter_UserRegisteredTokeniserBeforeCall_IsNotOverridden()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ICommandTokeniser, CustomTokeniser>();
+
+        services.AddCommandRouter(TestAssembly);
+
+        using var provider = services.BuildServiceProvider();
+        Assert.IsType<CustomTokeniser>(provider.GetRequiredService<ICommandTokeniser>());
+    }
+
+    [Fact]
+    public void AddCommandRouter_CalledTwice_DoesNotDuplicateRegistrations()
+    {
+        var services = new ServiceCollection();
+
+        services.AddCommandRouter(TestAssembly);
+        var countAfterFirstCall = services.Count;
+        services.AddCommandRouter(TestAssembly);
+
+        Assert.Equal(countAfterFirstCall, services.Count);
+        Assert.Single(services, d => d.ServiceType == typeof(ICommandRunner));
+        Assert.Single(services, d => d.ServiceType == typeof(ICommandTable));
+        Assert.Single(services, d => d.ServiceType == typeof(ApplicationManager));
+    }
+
+    [Fact]
+    public void AddCommandRouter_ReturnsSameServiceCollection()
+    {
+        var services = new ServiceCollection();
+
+        Assert.Same(services, services.AddCommandRouter(TestAssembly));
+        Assert.Same(services, services.AddCommandRouter(TestAssembly, _ => { }));
+    }
+
+    [Fact]
+    public void ValidateCommandRouter_BuildsCommandTableAndReturnsProvider()
+    {
+        var services = new ServiceCollection();
+        services.AddCommandRouter(TestAssembly);
+
+        using var provider = services.BuildServiceProvider();
+
+        Assert.Same(provider, provider.ValidateCommandRouter());
+        Assert.True(provider.GetRequiredService<ICommandTable>().Count > 0);
+    }
+
+    [Fact]
+    public async Task AddCommandRouter_SecondCallWithDifferentAssembly_AddsItsCommands()
+    {
+        var services = new ServiceCollection();
+        services.AddCommandRouter(typeof(ServiceCollection).Assembly);
+        services.AddCommandRouter(TestAssembly, o => o.PropertyConverters.Add(new CustomValueConverter()));
+
+        Assert.Equal("custom:abc", await RunAsync(services, "converter-custom abc"));
+    }
+
+    [Fact]
+    public void AddCommandRouter_DoesNotRegisterCommandClasses()
+    {
+        var services = new ServiceCollection();
+
+        services.AddCommandRouter(TestAssembly);
+
+        Assert.DoesNotContain(services, d => d.ServiceType == typeof(TestCommand));
+    }
+
+    [Fact]
+    public async Task AddCommandRouter_OptionsOnSecondCall_AreApplied()
+    {
+        var services = new ServiceCollection();
+        services.AddCommandRouter(TestAssembly);
+        services.AddCommandRouter(TestAssembly, o => o.PropertyConverters.Add(new CustomValueConverter()));
+
+        Assert.Equal("custom:abc", await RunAsync(services, "converter-custom abc"));
+    }
+
+    [Fact]
+    public async Task AddCommandRouter_OptionsConfiguredSeparately_AreApplied()
+    {
+        var services = new ServiceCollection();
+        services.AddCommandRouter(TestAssembly);
+        services.Configure<CommandRouterOptions>(o => o.PropertyConverters.Add(new CustomValueConverter()));
+
+        Assert.Equal("custom:abc", await RunAsync(services, "converter-custom abc"));
+    }
+
+    private static async Task<string> RunAsync(IServiceCollection services, string command)
+    {
+        using var provider = services.BuildServiceProvider();
+        var result = await provider.GetRequiredService<ICommandRunner>().RunAsync(command);
+
+        using var stream = new MemoryStream();
+        await result.ExecuteAsync(stream);
+        return Encoding.UTF8.GetString(stream.ToArray());
+    }
+
+    [Fact]
+    public void ApplicationManager_GetCommandFeature_FindsCommandsInAssemblies()
+    {
+        var manager = new ApplicationManager();
+        manager.Assemblies.Add(TestAssembly);
+
+        var feature = manager.GetCommandFeature();
+
+        Assert.Contains(feature.Commands, t => t.AsType() == typeof(TestCommand));
+    }
+
+    private sealed class CustomSelector : ICommandSelector
+    {
+        public bool TrySelect(TokenisedCommand command, ICommandTable commandTable, out CommandMatch match)
+        {
+            match = default;
+            return false;
+        }
+    }
+
+    private sealed class CustomTokeniser : ICommandTokeniser
+    {
+        public bool TryTokenise(string command, [NotNullWhen(true)] out TokenisedCommand? tokenised,
+            out int errorPosition)
+        {
+            tokenised = null;
+            errorPosition = 0;
+            return false;
+        }
+    }
+}

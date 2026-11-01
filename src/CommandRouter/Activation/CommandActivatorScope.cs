@@ -1,33 +1,30 @@
-namespace CommandRouter.Activation
+namespace CommandRouter.Activation;
+
+using System;
+using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+
+public sealed class CommandActivatorScope(AsyncServiceScope serviceScope) : ICommandActivatorScope, ICommandActivator
 {
-    using System;
-    using Microsoft.Extensions.DependencyInjection;
+    public ICommandActivator CommandActivator => this;
 
-    public class CommandActivatorScope : ICommandActivatorScope, ICommandActivator
+    public object? Create(Type type)
     {
-        private readonly IServiceScope _serviceScope;
+        return CommandFactory.Create(serviceScope.ServiceProvider, type);
+    }
 
-        public CommandActivatorScope(IServiceScope serviceScope)
-        {
-            _serviceScope = serviceScope;
-        }
+    public ICommandActivatorScope CreateScope()
+    {
+        return new CommandActivatorScope(serviceScope.ServiceProvider.CreateAsyncScope());
+    }
 
-        public ICommandActivator CommandActivator => this;
+    public void Dispose()
+    {
+        serviceScope.Dispose();
+    }
 
-        public object? Create(Type type)
-        {
-            return _serviceScope.ServiceProvider.GetService(type);
-        }
-
-        public ICommandActivatorScope CreateScope()
-        {
-            return new CommandActivatorScope(_serviceScope.ServiceProvider.CreateScope());
-        }
-
-        public void Dispose()
-        {
-            GC.SuppressFinalize(this);
-            _serviceScope.Dispose();
-        }
+    public ValueTask DisposeAsync()
+    {
+        return serviceScope.DisposeAsync();
     }
 }
