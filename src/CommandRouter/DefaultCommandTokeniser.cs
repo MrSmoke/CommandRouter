@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
-internal class DefaultCommandTokeniser : ICommandTokeniser
+internal sealed class DefaultCommandTokeniser : ICommandTokeniser
 {
     public bool TryTokenise(string str, [NotNullWhen(true)] out TokenisedCommand? command,
         out int errorPosition)

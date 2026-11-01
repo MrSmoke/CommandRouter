@@ -3,7 +3,7 @@
 using System.Collections.Generic;
 using System.Threading;
 
-public class CommandContext
+public sealed class CommandContext
 {
     public IDictionary<string, object> Items { get; } = new Dictionary<string, object>();
     public string[] Arguments { get; internal set; } = [];

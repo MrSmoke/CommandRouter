@@ -3,7 +3,7 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
 
-public class DefaultCommandActivator(IServiceProvider serviceProvider) : ICommandActivator
+public sealed class DefaultCommandActivator(IServiceProvider serviceProvider) : ICommandActivator
 {
     public object? Create(Type type)
     {

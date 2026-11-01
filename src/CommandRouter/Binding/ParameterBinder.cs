@@ -6,7 +6,7 @@ using Exceptions;
 using Extensions;
 using Microsoft.Extensions.Options;
 
-internal class ParameterBinder
+internal sealed class ParameterBinder
 {
     private readonly IPropertyConverter[] _propertyConverters;
 

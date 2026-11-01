@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using Commands;
 
-public class ApplicationManager
+internal sealed class ApplicationManager
 {
     private CommandFeature? _commandFeature;
 

@@ -112,7 +112,7 @@ public class CommandInvocationTests
     {
         var probe = new ScopeProbe();
         var services = new ServiceCollection().AddSingleton(probe).AddScoped<ScopedService>();
-        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()), new DefaultCommandTokeniser());
+        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()), new DefaultCommandTokeniser(), new ApplicationManager());
         table.RegisterCommands<ScopeCommand>();
 
         await CreateRunner(table).RunAsync("scope-sync");
@@ -130,7 +130,7 @@ public class CommandInvocationTests
             created++;
             return new ReturnTypeCommand();
         });
-        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()), new DefaultCommandTokeniser());
+        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()), new DefaultCommandTokeniser(), new ApplicationManager());
         table.RegisterCommands<ReturnTypeCommand>();
 
         await CreateRunner(table).RunAsync("return-void");
@@ -146,7 +146,7 @@ public class CommandInvocationTests
         var activator = new Mock<ICommandActivator>();
         activator.Setup(a => a.CreateScope()).Returns(scope.Object);
 
-        var table = new CommandTable(activator.Object, new DefaultCommandTokeniser());
+        var table = new CommandTable(activator.Object, new DefaultCommandTokeniser(), new ApplicationManager());
         table.RegisterCommands<ReturnTypeCommand>();
 
         var ex = await Assert.ThrowsAsync<CommandRouterException>(() => CreateRunner(table).RunAsync("return-void"));
@@ -157,7 +157,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_UnsupportedReturnType_ThrowsUnsupportedReturnTypeException()
     {
-        var table = new CommandTable(new DefaultCommandActivator(new ServiceCollection().BuildServiceProvider()), new DefaultCommandTokeniser());
+        var table = new CommandTable(new DefaultCommandActivator(new ServiceCollection().BuildServiceProvider()), new DefaultCommandTokeniser(), new ApplicationManager());
 
         var ex = Assert.Throws<UnsupportedReturnTypeException>(() => table.RegisterCommands<UnsupportedReturnCommand>());
 
@@ -168,7 +168,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_CommandWithExtraSpaces_IsNormalised()
     {
-        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser());
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser(), new ApplicationManager());
 
         table.RegisterCommands<ExtraSpacesCommand>();
 
@@ -234,7 +234,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_DerivedClassesWithDifferentPrefixes_ShareBaseCommands()
     {
-        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser());
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser(), new ApplicationManager());
 
         table.RegisterCommands<AdminCommand>();
         table.RegisterCommands<OpsCommand>();
@@ -245,7 +245,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_CommandWithTabsAndNewlines_IsNormalised()
     {
-        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser());
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser(), new ApplicationManager());
 
         table.RegisterCommands<WhitespaceNameCommand>();
 
@@ -255,7 +255,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_QuotedName_ThrowsCommandRouterException()
     {
-        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser());
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser(), new ApplicationManager());
 
         var ex = Assert.Throws<CommandRouterException>(() => table.RegisterCommands<QuotedNameCommand>());
 
@@ -265,7 +265,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_UnterminatedQuoteInName_ThrowsCommandRouterException()
     {
-        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser());
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser(), new ApplicationManager());
 
         var ex = Assert.Throws<CommandRouterException>(() => table.RegisterCommands<UnterminatedNameCommand>());
 
@@ -277,7 +277,7 @@ public class CommandInvocationTests
     {
         var tokeniser = new SlashTokeniser();
         var services = new ServiceCollection();
-        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()), tokeniser);
+        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()), tokeniser, new ApplicationManager());
         table.RegisterCommands<SlashNameCommand>();
         var runner = new CommandRunner(table, tokeniser, new DefaultCommandSelector(), TestBinder.Create());
 
@@ -290,7 +290,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_DuplicateCommand_ThrowsCommandRouterException()
     {
-        var table = new CommandTable(new DefaultCommandActivator(new ServiceCollection().BuildServiceProvider()), new DefaultCommandTokeniser());
+        var table = new CommandTable(new DefaultCommandActivator(new ServiceCollection().BuildServiceProvider()), new DefaultCommandTokeniser(), new ApplicationManager());
 
         var ex = Assert.Throws<CommandRouterException>(() => table.RegisterCommands<DuplicateCommand>());
 
@@ -300,7 +300,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_CommandWithNoNameOrPrefix_RegistersRootCommand()
     {
-        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser());
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser(), new ApplicationManager());
 
         table.RegisterCommands<NoNameCommand>();
 
@@ -310,7 +310,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_EmptyCommandName_RegistersRootCommand()
     {
-        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser());
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser(), new ApplicationManager());
 
         table.RegisterCommands<RootCommand>();
 
@@ -320,7 +320,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_CommandWithNoNameAndPrefix_RegistersPrefix()
     {
-        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser());
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokeniser(), new ApplicationManager());
 
         table.RegisterCommands<PrefixOnlyCommand>();
 
@@ -333,7 +333,7 @@ public class CommandInvocationTests
         services.AddTransient<T>();
         configure?.Invoke(services);
 
-        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()), new DefaultCommandTokeniser());
+        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()), new DefaultCommandTokeniser(), new ApplicationManager());
         table.RegisterCommands<T>();
 
         return CreateRunner(table);

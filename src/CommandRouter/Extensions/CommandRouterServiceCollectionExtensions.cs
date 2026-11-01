@@ -71,10 +71,7 @@ public static class CommandRouterServiceCollectionExtensions
         var manager = GetApplicationManager(services, entryAssembly);
         services.TryAddSingleton(manager);
 
-        services.TryAddSingleton<ICommandTable>(sp => new CommandTable(
-            sp.GetRequiredService<ICommandActivator>(),
-            sp.GetRequiredService<ICommandTokeniser>(),
-            sp.GetRequiredService<ApplicationManager>()));
+        services.TryAddSingleton<ICommandTable, CommandTable>();
 
         services.TryAddSingleton<ICommandActivator, DefaultCommandActivator>();
 

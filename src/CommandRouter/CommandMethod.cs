@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Binding;
 using Results;
 
-public class CommandMethod
+public sealed class CommandMethod
 {
     public Guid Id { get; }
     public string Command { get; }

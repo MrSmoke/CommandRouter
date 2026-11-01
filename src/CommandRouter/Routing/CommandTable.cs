@@ -14,13 +14,18 @@ using Exceptions;
 using Results;
 using ParameterInfo = Binding.ParameterInfo;
 
-public class CommandTable(ICommandActivator commandActivator, ICommandTokeniser commandTokeniser) : ICommandTable
+internal sealed class CommandTable : ICommandTable
 {
+    private readonly ICommandActivator _commandActivator;
+    private readonly ICommandTokeniser _commandTokeniser;
     private readonly Dictionary<string, CommandMethod> _methodTable = new();
 
     public CommandTable(ICommandActivator commandActivator, ICommandTokeniser commandTokeniser,
-        ApplicationManager applicationManager) : this(commandActivator, commandTokeniser)
+        ApplicationManager applicationManager)
     {
+        _commandActivator = commandActivator;
+        _commandTokeniser = commandTokeniser;
+
         LoadCommands(applicationManager);
     }
 
@@ -109,7 +114,7 @@ public class CommandTable(ICommandActivator commandActivator, ICommandTokeniser 
     /// </summary>
     private string ToCommandName(string command)
     {
-        if (!commandTokeniser.TryTokenise(command, out var tokenised, out _))
+        if (!_commandTokeniser.TryTokenise(command, out var tokenised, out _))
             throw new CommandRouterException($"Command '{command}' has an unterminated quote");
 
         // Quoted tokens are always arguments, so a name containing one could never match
@@ -154,7 +159,7 @@ public class CommandTable(ICommandActivator commandActivator, ICommandTokeniser 
 
         return async (args, context) =>
         {
-            var scope = commandActivator.CreateScope();
+            var scope = _commandActivator.CreateScope();
 
             // Disposed after async work completes
             await using var _ = scope.ConfigureAwait(false);

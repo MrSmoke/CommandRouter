@@ -3,7 +3,7 @@
 using System;
 
 [AttributeUsage(AttributeTargets.Method)]
-public class CommandAttribute : Attribute
+public sealed class CommandAttribute : Attribute
 {
     public CommandAttribute()
     {

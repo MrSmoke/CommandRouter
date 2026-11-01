@@ -1,4 +1,4 @@
 ﻿namespace CommandRouter.Exceptions;
 
-public class CommandNotFoundException(string commandName)
+public sealed class CommandNotFoundException(string commandName)
     : CommandRouterException($"Command {commandName} could not be found");

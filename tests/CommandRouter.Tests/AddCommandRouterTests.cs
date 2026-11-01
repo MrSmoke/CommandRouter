@@ -54,17 +54,6 @@ public class AddCommandRouterTests
     }
 
     [Fact]
-    public void AddCommandRouter_RegistersCommandTableThroughFactory()
-    {
-        var services = new ServiceCollection();
-
-        services.AddCommandRouter(TestAssembly);
-
-        var descriptor = services.Single(d => d.ServiceType == typeof(ICommandTable));
-        Assert.NotNull(descriptor.ImplementationFactory);
-    }
-
-    [Fact]
     public void AddCommandRouter_ReturnsSameServiceCollection()
     {
         var services = new ServiceCollection();

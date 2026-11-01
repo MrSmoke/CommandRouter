@@ -2,7 +2,7 @@
 
 using System;
 
-public class ParameterInfo
+internal sealed class ParameterInfo
 {
     public string? Name { get; init; }
     public required Type Type { get; init; }

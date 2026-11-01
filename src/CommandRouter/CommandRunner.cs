@@ -9,7 +9,7 @@ using Exceptions;
 using Results;
 using Routing;
 
-internal class CommandRunner(
+internal sealed class CommandRunner(
     ICommandTable commandTable,
     ICommandTokeniser commandTokeniser,
     ICommandSelector commandSelector,

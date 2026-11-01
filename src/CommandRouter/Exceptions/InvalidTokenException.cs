@@ -1,6 +1,6 @@
 namespace CommandRouter.Exceptions;
 
-public class InvalidTokenException(string message, int position) : CommandRouterException(message)
+public sealed class InvalidTokenException(string message, int position) : CommandRouterException(message)
 {
     public InvalidTokenException(string message) : this(message, -1)
     {

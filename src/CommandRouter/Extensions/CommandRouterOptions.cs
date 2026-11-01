@@ -3,7 +3,7 @@
 using System.Collections.Generic;
 using Converters;
 
-public class CommandRouterOptions
+public sealed class CommandRouterOptions
 {
     /// <summary>
     /// Custom property converters.

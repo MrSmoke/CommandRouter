@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-public class StringResult(string content, Encoding encoding) : ICommandResult
+public sealed class StringResult(string content, Encoding encoding) : ICommandResult
 {
     public StringResult(string content) : this(content, Encoding.UTF8)
     {

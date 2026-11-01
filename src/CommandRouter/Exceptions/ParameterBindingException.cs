@@ -5,7 +5,7 @@ using System;
 /// <summary>
 /// Thrown when a command argument is missing or can't be converted to its parameter type
 /// </summary>
-public class ParameterBindingException : CommandRouterException
+public sealed class ParameterBindingException : CommandRouterException
 {
     public ParameterBindingException(string message, string? parameterName, string? value)
         : base(message)

@@ -3,7 +3,7 @@ namespace CommandRouter.Converters;
 using System;
 using System.Globalization;
 
-public class SystemTypeConverter : IPropertyConverter
+public sealed class SystemTypeConverter : IPropertyConverter
 {
     public bool CanConvert(Type propertyType, string value)
     {

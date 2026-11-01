@@ -3,7 +3,7 @@ namespace CommandRouter;
 using System;
 using Routing;
 
-internal class DefaultCommandSelector : ICommandSelector
+internal sealed class DefaultCommandSelector : ICommandSelector
 {
     /// <summary>
     /// Selects the command matching the most leading tokens, falling back to the root command. Quoted tokens are
