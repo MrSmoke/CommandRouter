@@ -3,7 +3,7 @@ namespace CommandRouter.Tests;
 using System;
 using Attributes;
 using Commands;
-using Converters;
+using CommandRouter.Converters;
 using Results;
 using Xunit;
 

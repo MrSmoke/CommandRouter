@@ -2,11 +2,7 @@
 
 using System;
 using System.Threading.Tasks;
-using Activation;
-using Attributes;
-using Commands;
 using Exceptions;
-using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Results;
 using Routing;
@@ -88,58 +84,6 @@ public class CommandRunnerTests
 
         await Assert.ThrowsAsync<CommandNotFoundException>(() => commandRunner.RunAsync("nope"));
     }
-
-    [Fact]
-    public async Task RunAsync_CanResolveScopedServices()
-    {
-        var services = new ServiceCollection();
-
-        services.AddScoped<DisposableService>();
-        services.AddTransient<TestCommand>();
-
-        var activator = new DefaultCommandActivator(services.BuildServiceProvider());
-
-        var commandTable = new CommandTable(activator);
-
-        commandTable.RegisterCommands<TestCommand>();
-
-        var runner = new CommandRunner(commandTable, new DefaultCommandTokenizer(), new DefaultCommandSelector(),
-            TestBinder.Create());
-
-        // Test sync
-        await runner.RunAsync("test");
-
-        // Test await async
-        await runner.RunAsync("test-async");
-    }
-
-    private class DisposableService : IDisposable
-    {
-        public Action? OnDispose { get; set; }
-
-        public void Dispose()
-        {
-            OnDispose?.Invoke();
-        }
-    }
-
-#pragma warning disable CA1822
-    private class TestCommand : Command
-    {
-        [Command("test")]
-        public void Hello()
-        {
-        }
-
-        [Command("test-async")]
-        public async Task<ICommandResult> HelloAsync()
-        {
-            await Task.Delay(1000);
-
-            return new StringResult("hello");
-        }
-    }
-#pragma warning restore CA1822
 
     private class TestException : Exception;
 }

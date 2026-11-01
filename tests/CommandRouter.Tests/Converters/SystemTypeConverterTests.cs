@@ -1,4 +1,4 @@
-namespace CommandRouter.Tests.TypeConversion;
+namespace CommandRouter.Tests.Converters;
 
 using System;
 using System.Globalization;

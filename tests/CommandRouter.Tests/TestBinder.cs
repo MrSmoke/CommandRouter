@@ -1,7 +1,7 @@
 namespace CommandRouter.Tests;
 
 using CommandRouter.Binding;
-using Converters;
+using CommandRouter.Converters;
 using Extensions;
 using Microsoft.Extensions.Options;
 

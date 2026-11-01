@@ -2,7 +2,7 @@
 
 using System;
 using CommandRouter.Binding;
-using Converters;
+using CommandRouter.Converters;
 using Exceptions;
 using Moq;
 using Xunit;

@@ -12,11 +12,6 @@ using Xunit;
 
 public class CommandRunnerIntegrationTests
 {
-    public CommandRunnerIntegrationTests()
-    {
-        _ = new TestCommand();
-    }
-
     [Theory]
     [InlineData("void-return-null-param")]
     [InlineData("void-return-param testvalue")]
