@@ -14,10 +14,9 @@ using Exceptions;
 using Results;
 using ParameterInfo = Binding.ParameterInfo;
 
-public class CommandTable(ICommandActivator commandActivator) : ICommandTable, ICommandMatcher
+public class CommandTable(ICommandActivator commandActivator) : ICommandTable
 {
     private readonly Dictionary<string, CommandMethod> _methodTable = new();
-    private readonly TrieNode _root = new();
 
     public CommandTable(ICommandActivator commandActivator, ApplicationManager applicationManager) :
         this(commandActivator)
@@ -30,7 +29,7 @@ public class CommandTable(ICommandActivator commandActivator) : ICommandTable, I
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(action);
 
-        AddMethod(new CommandMethod(command,
+        AddMethod(new CommandMethod(NormaliseCommand(command),
             (args, context) => new ValueTask<ICommandResult>(action(args, context)),
             []));
     }
@@ -87,7 +86,7 @@ public class CommandTable(ICommandActivator commandActivator) : ICommandTable, I
             if (attributes.Length == 0)
                 continue;
 
-            // Everything reflection based is done once per method, not once per command string
+            // Shared by every command string on this method
             var resultAdapter = CreateResultAdapter(method.ReturnType);
             var parameters = CreateParameters(method, nullabilityContext);
             var action = resultAdapter == null ? null : CreateAction(type, method, resultAdapter);
@@ -104,7 +103,7 @@ public class CommandTable(ICommandActivator commandActivator) : ICommandTable, I
                             "including types derived from ICommandResult.");
                     }
 
-                    AddMethod(new CommandMethod(cmdStr, action, parameters));
+                    AddMethod(new CommandMethod(NormaliseCommand(cmdStr), action, parameters));
                 }
             }
         }
@@ -112,111 +111,14 @@ public class CommandTable(ICommandActivator commandActivator) : ICommandTable, I
 
     private void AddMethod(CommandMethod method)
     {
-        var node = GetOrAddNode(method.Command);
-
-        if (node.Method != null || !_methodTable.TryAdd(method.Command, method))
+        if (!_methodTable.TryAdd(method.Command, method))
             throw new CommandRouterException($"Command '{method.Command}' has already been registered");
-
-        node.Method = method;
     }
 
-    private TrieNode GetOrAddNode(string command)
+    // Single spaced to match the selector
+    private static string NormaliseCommand(string command)
     {
-        return command
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Aggregate(_root, (current, word) => current.GetOrAddChild(word));
-    }
-
-    // Walks the command words once and remembers the deepest command found. No allocations
-    public bool TryMatch(IReadOnlyList<CommandToken> tokens, out CommandMatch match)
-    {
-        var node = _root;
-        var best = node.Method;
-        var argumentStart = 0;
-
-        for (var i = 0; i < tokens.Count; i++)
-        {
-            if (!node.TryGetChild(tokens[i].ValueSpan, out var next))
-                break;
-
-            node = next;
-
-            if (node.Method == null)
-                continue;
-
-            best = node.Method;
-            argumentStart = i + 1;
-        }
-
-        if (best == null)
-        {
-            match = default;
-            return false;
-        }
-
-        match = new CommandMatch(best, argumentStart);
-        return true;
-    }
-
-    private sealed class TrieNode
-    {
-        // Children are kept sorted by key (ordinal) so they can be found from a span without allocating
-        private string[] _keys = [];
-        private TrieNode[] _nodes = [];
-
-        public CommandMethod? Method { get; set; }
-
-        public bool TryGetChild(ReadOnlySpan<char> key, [NotNullWhen(true)] out TrieNode? child)
-        {
-            var low = 0;
-            var high = _keys.Length - 1;
-
-            while (low <= high)
-            {
-                var mid = low + ((high - low) >> 1);
-                var comparison = key.CompareTo(_keys[mid], StringComparison.Ordinal);
-
-                if (comparison == 0)
-                {
-                    child = _nodes[mid];
-                    return true;
-                }
-
-                if (comparison < 0)
-                    high = mid - 1;
-                else
-                    low = mid + 1;
-            }
-
-            child = null;
-            return false;
-        }
-
-        public TrieNode GetOrAddChild(string key)
-        {
-            if (TryGetChild(key, out var existing))
-                return existing;
-
-            var index = Array.BinarySearch(_keys, key, StringComparer.Ordinal);
-            index = ~index;
-
-            var keys = new string[_keys.Length + 1];
-            var nodes = new TrieNode[_nodes.Length + 1];
-
-            Array.Copy(_keys, 0, keys, 0, index);
-            Array.Copy(_nodes, 0, nodes, 0, index);
-            Array.Copy(_keys, index, keys, index + 1, _keys.Length - index);
-            Array.Copy(_nodes, index, nodes, index + 1, _nodes.Length - index);
-
-            var child = new TrieNode();
-            keys[index] = key;
-            nodes[index] = child;
-
-            _keys = keys;
-            _nodes = nodes;
-
-            return child;
-        }
+        return string.Join(' ', command.Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 
     private static ParameterInfo[] CreateParameters(MethodInfo method, NullabilityInfoContext nullabilityContext)
@@ -251,7 +153,7 @@ public class CommandTable(ICommandActivator commandActivator) : ICommandTable, I
 
         return async (args, context) =>
         {
-            // The scope lives until the command (including any async work) has finished
+            // Disposed after async work completes
             using var scope = commandActivator.CreateScope();
 
             if (scope.CommandActivator.Create(classType) is not Command command)

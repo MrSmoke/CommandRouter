@@ -159,6 +159,20 @@ public class DefaultCommandSelectorTests
         Assert.Equal(0, match.ArgumentStart);
     }
 
+    [Theory]
+    [InlineData("user  add")]
+    [InlineData("  user add ")]
+    public void SelectCommand_CommandTable_CommandRegisteredWithExtraSpaces_IsNormalised(string registered)
+    {
+        var table = CreateTable(registered);
+
+        var result = new DefaultCommandSelector().TrySelect(Tokenize("user add bob"), table, out var match);
+
+        Assert.True(result);
+        Assert.Equal("user add", match.Method.Command);
+        Assert.True(table.ContainsKey("user add"));
+    }
+
     [Fact]
     public void SelectCommand_CommandTable_CommandAddedAfterFirstSelect_IsSelected()
     {

@@ -15,8 +15,9 @@ public class ApplicationManager
         DefaultCommandFeatureProvider.PopulateFeature(Assemblies, feature);
     }
 
-    // The assemblies are scanned once, then shared by DI registration and the command table.
-    // Assemblies must be fully populated before the first call
+    /// <summary>
+    /// Scans <see cref="Assemblies"/> for commands on the first call, then returns the cached result
+    /// </summary>
     internal CommandFeature GetCommandFeature()
     {
         if (_commandFeature != null)

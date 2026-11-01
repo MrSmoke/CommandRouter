@@ -61,7 +61,9 @@ public static class CommandRouterServiceCollectionExtensions
         return provider;
     }
 
-    // Options passed to later calls are ignored if the router was already registered
+    /// <summary>
+    /// Registers the router. If it is already registered, the options are ignored
+    /// </summary>
     private static IServiceCollection AddCore(IServiceCollection services, Assembly entryAssembly,
         CommandRouterOptions options)
     {
