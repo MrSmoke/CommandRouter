@@ -13,4 +13,9 @@ internal sealed class ParameterInfo
     /// If true, the property is allowed to be null
     /// </summary>
     public bool IsNullable { get; init; }
+
+    /// <summary>
+    /// If true, the parameter is a params array that receives all the remaining arguments
+    /// </summary>
+    public bool IsParams { get; init; }
 }

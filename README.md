@@ -116,7 +116,8 @@ public class UserCommand : Command
 ```
 
 - `[Command]` with no name is the same as `[Command("")]`: the prefix itself, or the root command without a prefix.
-- The root command (`""`) runs when nothing else matches, with all the input as arguments.
+- The root command (`""`) runs when nothing else matches, with all the input as arguments. Give it a `params`
+  parameter to accept any input.
 - Whitespace around and between words doesn't matter, so `[CommandPrefix("user ")]` with `[Command(" add")]`
   registers `user add`.
 - Names are case-sensitive and can't contain quotes.
@@ -219,7 +220,8 @@ Arguments are separated by whitespace and passed to the method's parameters in o
 - A missing argument uses the parameter's default value, or `null` for a nullable parameter. Otherwise
   `ParameterBindingException` is thrown. In code without nullable reference types enabled, every reference type
   parameter counts as nullable.
-- Extra arguments are ignored by the method, but are still in `Context.Arguments`.
+- Extra arguments throw `ParameterBindingException`. To accept any number, end the method with a `params` array,
+  such as `params string[] words`. It receives the remaining arguments, each converted to the element type.
 
 ### Supported types
 
@@ -271,7 +273,7 @@ Exceptions thrown by a command itself are passed through unchanged.
 |---|---|
 | `CommandNotFoundException` | No command matches the input |
 | `InvalidTokenException` | The input is missing a closing quote. `Position` is where the quoted argument starts |
-| `ParameterBindingException` | An argument is missing or can't be converted. See `ParameterName`, `Value` and `InnerException` |
+| `ParameterBindingException` | An argument is missing, extra or can't be converted. See `ParameterName`, `Value` and `InnerException` |
 | `UnsupportedReturnTypeException` | A command method has an unsupported return type (when commands are loaded) |
 | `CommandRouterException` | A command name is registered twice (when commands are loaded) |
 

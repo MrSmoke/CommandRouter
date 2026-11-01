@@ -145,7 +145,8 @@ internal sealed class CommandTable : ICommandTable
                 HasDefaultValue = p.HasDefaultValue,
                 IsNullable = nullableInfo.WriteState
                     is NullabilityState.Nullable
-                    or NullabilityState.Unknown
+                    or NullabilityState.Unknown,
+                IsParams = p.IsDefined(typeof(ParamArrayAttribute), false)
             };
         }
 

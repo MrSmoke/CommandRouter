@@ -59,6 +59,26 @@ public class CommandInvocationTests
         Assert.Equal("3", await ReadAsync(result));
     }
 
+    [Fact]
+    public async Task RunAsync_ExtraArguments_ThrowsParameterBindingException()
+    {
+        var runner = CreateRunner<ReturnTypeCommand>();
+
+        var ex = await Assert.ThrowsAsync<ParameterBindingException>(() => runner.RunAsync("add 1 2 3"));
+
+        Assert.Equal("3", ex.Value);
+    }
+
+    [Fact]
+    public async Task RunAsync_ParamsArray_ReceivesRemainingArguments()
+    {
+        var runner = CreateRunner<ReturnTypeCommand>();
+
+        var result = await runner.RunAsync("sum 1 2 3");
+
+        Assert.Equal("6", await ReadAsync(result));
+    }
+
     [Theory]
     [InlineData("throw-sync")]
     [InlineData("throw-task")]
@@ -441,6 +461,9 @@ public class CommandInvocationTests
 
         [Command("add")]
         public ICommandResult Add(int a, int b) => new StringResult((a + b).ToString());
+
+        [Command("sum")]
+        public ICommandResult Sum(params int[] numbers) => new StringResult(numbers.Sum().ToString());
     }
 
     private class ThrowingCommand : Command

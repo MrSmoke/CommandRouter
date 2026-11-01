@@ -26,12 +26,37 @@ internal sealed class ParameterBinder
         {
             var pInfo = parameterInfos[i];
 
+            // A params array is always last and takes every remaining argument
+            if (pInfo.IsParams)
+            {
+                boundParams[i] = BindParamsArray(pInfo, parameters, i);
+                return boundParams;
+            }
+
             var value = i < parameters.Length ? parameters[i] : null;
 
             boundParams[i] = ConvertParameter(pInfo, value);
         }
 
+        if (parameters.Length > parameterInfos.Length)
+        {
+            throw new ParameterBindingException(
+                $"Too many arguments, expected at most {parameterInfos.Length}", null,
+                parameters[parameterInfos.Length]);
+        }
+
         return boundParams;
+    }
+
+    private Array BindParamsArray(ParameterInfo paramInfo, string[] parameters, int start)
+    {
+        var elementInfo = new ParameterInfo { Name = paramInfo.Name, Type = paramInfo.Type.GetElementType()! };
+        var array = Array.CreateInstance(elementInfo.Type, Math.Max(parameters.Length - start, 0));
+
+        for (var i = 0; i < array.Length; i++)
+            array.SetValue(ConvertParameter(elementInfo, parameters[start + i]), i);
+
+        return array;
     }
 
     private object? ConvertParameter(ParameterInfo paramInfo, string? value)
