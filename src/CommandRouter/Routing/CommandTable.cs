@@ -28,7 +28,7 @@ public class CommandTable(ICommandActivator commandActivator) : ICommandTable
     /// Adds the commands declared on <typeparamref name="T"/>. Not thread-safe, so only call this at startup before
     /// any commands run
     /// </summary>
-    public void RegisterCommands<T>() where T : Command
+    internal void RegisterCommands<T>() where T : Command
     {
         LoadCommands(typeof(T));
     }
