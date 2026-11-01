@@ -9,7 +9,7 @@ public class SystemTypeConverter : IPropertyConverter
     {
         var target = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
 
-        if (target == typeof(string) || target.IsEnum || target == typeof(Guid) ||
+        if (target == typeof(string) || target == typeof(object) || target.IsEnum || target == typeof(Guid) ||
             target == typeof(TimeSpan) || target == typeof(DateTimeOffset))
             return true;
 
@@ -20,7 +20,7 @@ public class SystemTypeConverter : IPropertyConverter
     {
         var target = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
 
-        if (target == typeof(string))
+        if (target == typeof(string) || target == typeof(object))
             return value;
 
         if (target.IsEnum)

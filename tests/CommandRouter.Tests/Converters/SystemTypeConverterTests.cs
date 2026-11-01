@@ -97,6 +97,13 @@ public class SystemTypeConverterTests
     }
 
     [Fact]
+    public void Convert_Object_ReturnsSameString()
+    {
+        Assert.True(_converter.CanConvert(typeof(object), "abc"));
+        Assert.Equal("abc", _converter.Convert(typeof(object), "abc"));
+    }
+
+    [Fact]
     public void CanConvert_UnsupportedType_ReturnsFalse()
     {
         Assert.False(_converter.CanConvert(typeof(UnsupportedType), "abc"));

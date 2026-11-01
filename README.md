@@ -230,6 +230,7 @@ Arguments are separated by spaces and passed to the method's parameters in order
 Built in:
 
 - `string`, `bool`, `char` and the numeric types
+- `object`, which receives the argument as a string
 - `DateTime`, `DateTimeOffset`, `TimeSpan` and `Guid`
 - enums, by name (ignoring case) or by a defined number. Combined values are allowed for `[Flags]` enums.
 - nullable versions of all of these

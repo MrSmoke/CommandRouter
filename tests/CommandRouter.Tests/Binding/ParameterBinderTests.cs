@@ -91,7 +91,7 @@ public class ParameterBinderTests
     [Fact]
     public void BindParameters_NoConverter_ThrowsParameterBindingException()
     {
-        ParameterInfo[] parameterInfos = [new() { Name = "p", Type = typeof(object) }];
+        ParameterInfo[] parameterInfos = [new() { Name = "p", Type = typeof(Uri) }];
 
         var binder = TestBinder.Create();
 
