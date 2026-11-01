@@ -2,6 +2,7 @@ namespace CommandRouter.Tests.TypeConversion;
 
 using System;
 using System.Globalization;
+using System.IO;
 using CommandRouter.Converters;
 using Xunit;
 
@@ -27,6 +28,25 @@ public class SystemTypeConverterTests
     public void Convert_NullableEnum_ParsesName()
     {
         Assert.Equal(DayOfWeek.Monday, _converter.Convert(typeof(DayOfWeek?), "Monday"));
+    }
+
+    [Fact]
+    public void Convert_UndefinedEnumNumber_Throws()
+    {
+        Assert.Throws<ArgumentException>(() => _converter.Convert(typeof(DayOfWeek), "999"));
+    }
+
+    [Fact]
+    public void Convert_DefinedEnumNumber_Parses()
+    {
+        Assert.Equal(DayOfWeek.Monday, _converter.Convert(typeof(DayOfWeek), "1"));
+    }
+
+    [Fact]
+    public void Convert_FlagsEnumCombination_Parses()
+    {
+        Assert.Equal(FileAccess.ReadWrite, _converter.Convert(typeof(FileAccess), "Read, Write"));
+        Assert.Equal(FileAccess.ReadWrite, _converter.Convert(typeof(FileAccess), "3"));
     }
 
     [Fact]

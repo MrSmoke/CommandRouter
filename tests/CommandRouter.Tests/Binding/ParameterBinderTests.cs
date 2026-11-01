@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using CommandRouter.Binding;
 using Converters;
+using Exceptions;
 using Moq;
 using Xunit;
 
@@ -66,8 +67,38 @@ public class ParameterBinderTests
 
         var binder = new ParameterBinder(new List<IPropertyConverter> { CreatePassThroughConverter() });
 
-        var ex = Assert.Throws<ArgumentNullException>(() => binder.BindParameters(parameterInfos, ["x"]));
-        Assert.Equal("c", ex.ParamName);
+        var ex = Assert.Throws<ParameterBindingException>(() => binder.BindParameters(parameterInfos, ["x"]));
+        Assert.Equal("c", ex.ParameterName);
+        Assert.Null(ex.Value);
+    }
+
+    [Theory]
+    [InlineData(typeof(int), "abc", typeof(FormatException))]
+    [InlineData(typeof(byte), "300", typeof(OverflowException))]
+    [InlineData(typeof(DayOfWeek), "someday", typeof(ArgumentException))]
+    public void BindParameters_ConversionFails_ThrowsParameterBindingException(Type type, string value,
+        Type innerType)
+    {
+        ParameterInfo[] parameterInfos = [new() { Name = "p", Type = type }];
+
+        var binder = new ParameterBinder(new List<IPropertyConverter> { new SystemTypeConverter() });
+
+        var ex = Assert.Throws<ParameterBindingException>(() => binder.BindParameters(parameterInfos, [value]));
+        Assert.Equal("p", ex.ParameterName);
+        Assert.Equal(value, ex.Value);
+        Assert.IsType(innerType, ex.InnerException);
+    }
+
+    [Fact]
+    public void BindParameters_NoConverter_ThrowsParameterBindingException()
+    {
+        ParameterInfo[] parameterInfos = [new() { Name = "p", Type = typeof(object) }];
+
+        var binder = new ParameterBinder(new List<IPropertyConverter> { new SystemTypeConverter() });
+
+        var ex = Assert.Throws<ParameterBindingException>(() => binder.BindParameters(parameterInfos, ["x"]));
+        Assert.Equal("p", ex.ParameterName);
+        Assert.Equal("x", ex.Value);
     }
 
     private static IPropertyConverter CreatePassThroughConverter()

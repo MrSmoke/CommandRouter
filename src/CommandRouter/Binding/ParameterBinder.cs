@@ -47,7 +47,10 @@ internal class ParameterBinder
             // If we don't have a default value, check if we are allowed to be nullable
             // If not, throw
             if (!paramInfo.IsNullable)
-                throw new ArgumentNullException(paramInfo.Name);
+            {
+                throw new ParameterBindingException(
+                    $"Missing value for parameter '{paramInfo.Name}'", paramInfo.Name, null);
+            }
         }
 
         // Nullable parameter without a supplied value
@@ -61,10 +64,20 @@ internal class ParameterBinder
             if (!converter.CanConvert(paramInfo.Type, value))
                 continue;
 
-            return converter.Convert(paramInfo.Type, value);
+            try
+            {
+                return converter.Convert(paramInfo.Type, value);
+            }
+            catch (Exception ex) when (ex is not ParameterBindingException)
+            {
+                throw new ParameterBindingException(
+                    $"Unable to convert '{value}' to {paramInfo.Type} for parameter '{paramInfo.Name}'",
+                    paramInfo.Name, value, ex);
+            }
         }
 
-        throw new CommandRouterException(
-            $"No converter can convert '{value}' to {paramInfo.Type} for parameter '{paramInfo.Name}'");
+        throw new ParameterBindingException(
+            $"No converter can convert '{value}' to {paramInfo.Type} for parameter '{paramInfo.Name}'",
+            paramInfo.Name, value);
     }
 }

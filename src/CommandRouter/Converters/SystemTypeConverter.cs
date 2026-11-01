@@ -24,7 +24,7 @@ public class SystemTypeConverter : IPropertyConverter
             return value;
 
         if (target.IsEnum)
-            return Enum.Parse(target, value, true);
+            return ParseEnum(target, value);
 
         if (target == typeof(Guid))
             return Guid.Parse(value);
@@ -36,5 +36,16 @@ public class SystemTypeConverter : IPropertyConverter
             return DateTimeOffset.Parse(value, CultureInfo.InvariantCulture);
 
         return System.Convert.ChangeType(value, target, CultureInfo.InvariantCulture);
+    }
+
+    private static object ParseEnum(Type enumType, string value)
+    {
+        var result = Enum.Parse(enumType, value, true);
+
+        // Combined flags aren't individually defined
+        if (!enumType.IsDefined(typeof(FlagsAttribute), false) && !Enum.IsDefined(enumType, result))
+            throw new ArgumentException($"'{value}' is not a defined value of {enumType}", nameof(value));
+
+        return result;
     }
 }

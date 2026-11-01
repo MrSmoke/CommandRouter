@@ -31,13 +31,13 @@ public class CommandRunnerIntegrationTests
     }
 
     [Fact]
-    public async Task RunAsync_VoidReturn_NotNullableParameterNull_ThrowsArgumentNullException()
+    public async Task RunAsync_VoidReturn_NotNullableParameterNull_ThrowsParameterBindingException()
     {
         var commandRunner = Setup();
 
-        var ex = await Assert.ThrowsAsync<ArgumentNullException>(() => commandRunner.RunAsync("void-return-param"));
+        var ex = await Assert.ThrowsAsync<ParameterBindingException>(() => commandRunner.RunAsync("void-return-param"));
 
-        Assert.Equal("commandParam", ex.ParamName);
+        Assert.Equal("commandParam", ex.ParameterName);
     }
 
     [Fact]
@@ -53,11 +53,11 @@ public class CommandRunnerIntegrationTests
     }
 
     [Fact]
-    public async Task RunAsync_NoConverterForParameterType_ThrowsCommandRouterException()
+    public async Task RunAsync_NoConverterForParameterType_ThrowsParameterBindingException()
     {
         var commandRunner = Setup();
 
-        await Assert.ThrowsAsync<CommandRouterException>(() => commandRunner.RunAsync("converter-custom abc"));
+        await Assert.ThrowsAsync<ParameterBindingException>(() => commandRunner.RunAsync("converter-custom abc"));
     }
 
     private static ICommandRunner Setup(Action<CommandRouterOptions>? configure = null)
