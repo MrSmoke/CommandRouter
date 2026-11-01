@@ -83,6 +83,17 @@ public class CommandInvocationTests
     }
 
     [Fact]
+    public async Task RunAsync_ScopedServiceOnlyAsyncDisposable_DisposesAsync()
+    {
+        var probe = new ScopeProbe();
+        var runner = CreateRunner<AsyncScopeCommand>(s => s.AddSingleton(probe).AddScoped<AsyncOnlyScopedService>());
+
+        await runner.RunAsync("scope-async-only");
+
+        Assert.True(probe.Disposed);
+    }
+
+    [Fact]
     public async Task RunAsync_CommandThrows_StillDisposesScope()
     {
         var probe = new ScopeProbe();
@@ -164,7 +175,26 @@ public class CommandInvocationTests
         }
     }
 
+    private sealed class AsyncOnlyScopedService(ScopeProbe probe) : IAsyncDisposable
+    {
+        public ValueTask DisposeAsync()
+        {
+            probe.Disposed = true;
+            return ValueTask.CompletedTask;
+        }
+    }
+
 #pragma warning disable CA1822, CA1859
+    private class AsyncScopeCommand(AsyncOnlyScopedService service) : Command
+    {
+        public AsyncOnlyScopedService Service { get; } = service;
+
+        [Command("scope-async-only")]
+        public void Run()
+        {
+        }
+    }
+
     private class ReturnTypeCommand : Command
     {
         [Command("return-result")]

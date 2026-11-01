@@ -153,8 +153,10 @@ public class CommandTable(ICommandActivator commandActivator) : ICommandTable
 
         return async (args, context) =>
         {
+            var scope = commandActivator.CreateScope();
+
             // Disposed after async work completes
-            using var scope = commandActivator.CreateScope();
+            await using var _ = scope.ConfigureAwait(false);
 
             if (scope.CommandActivator.Create(classType) is not Command command)
             {

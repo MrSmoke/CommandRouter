@@ -12,6 +12,6 @@ public class DefaultCommandActivator(IServiceProvider serviceProvider) : IComman
 
     public ICommandActivatorScope CreateScope()
     {
-        return new CommandActivatorScope(serviceProvider.CreateScope());
+        return new CommandActivatorScope(serviceProvider.CreateAsyncScope());
     }
 }
