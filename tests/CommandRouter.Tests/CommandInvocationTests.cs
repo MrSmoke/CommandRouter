@@ -1,9 +1,11 @@
 namespace CommandRouter.Tests;
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Activation;
 using Attributes;
@@ -170,6 +172,42 @@ public class CommandInvocationTests
         table.RegisterCommands<ExtraSpacesCommand>();
 
         Assert.Equal(["user add"], table.Keys);
+    }
+
+    [Fact]
+    public async Task RunAsync_ContextItems_AreOnCommandContext()
+    {
+        var probe = new ContextProbe();
+        var runner = CreateRunner<ContextCommand>(s => s.AddSingleton(probe));
+        IReadOnlyDictionary<string, object> items = new Dictionary<string, object> { ["key"] = "value" };
+
+        await runner.RunAsync("context", items);
+
+        Assert.Equal("value", probe.Context!.Items["key"]);
+    }
+
+    [Fact]
+    public async Task RunAsync_CancellationToken_IsOnCommandContext()
+    {
+        var probe = new ContextProbe();
+        var runner = CreateRunner<ContextCommand>(s => s.AddSingleton(probe));
+        using var cts = new CancellationTokenSource();
+
+        await runner.RunAsync("context", cts.Token);
+
+        Assert.Equal(cts.Token, probe.Context!.CancellationToken);
+    }
+
+    [Fact]
+    public async Task RunAsync_AlreadyCancelled_ThrowsWithoutRunningCommand()
+    {
+        var probe = new ContextProbe();
+        var runner = CreateRunner<ContextCommand>(s => s.AddSingleton(probe));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => runner.RunAsync("context", new CancellationToken(true)));
+
+        Assert.Null(probe.Context);
     }
 
     [Fact]
@@ -414,6 +452,20 @@ public class CommandInvocationTests
         [Command("  add ")]
         public void Add()
         {
+        }
+    }
+
+    private class ContextProbe
+    {
+        public CommandContext? Context { get; set; }
+    }
+
+    private class ContextCommand(ContextProbe probe) : Command
+    {
+        [Command("context")]
+        public void Run()
+        {
+            probe.Context = Context;
         }
     }
 

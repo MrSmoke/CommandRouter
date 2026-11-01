@@ -2,6 +2,7 @@
 
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 public class StringResult(string content, Encoding encoding) : ICommandResult
@@ -10,9 +11,8 @@ public class StringResult(string content, Encoding encoding) : ICommandResult
     {
     }
 
-    public Task ExecuteAsync(Stream resultStream)
+    public Task ExecuteAsync(Stream resultStream, CancellationToken cancellationToken = default)
     {
-        var bytes = encoding.GetBytes(content);
-        return resultStream.WriteAsync(bytes, 0, bytes.Length);
+        return resultStream.WriteAsync(encoding.GetBytes(content), cancellationToken).AsTask();
     }
 }

@@ -1,11 +1,13 @@
 ﻿namespace CommandRouter.Results;
 
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 internal class EmptyResult : ICommandResult
 {
-    public Task ExecuteAsync(Stream resultStream) => Task.CompletedTask;
+    public Task ExecuteAsync(Stream resultStream, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
 
     public static readonly EmptyResult Empty = new();
 }

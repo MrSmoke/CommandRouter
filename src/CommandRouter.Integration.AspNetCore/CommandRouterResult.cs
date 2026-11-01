@@ -8,6 +8,6 @@ public class CommandRouterResult(ICommandResult commandResult) : IActionResult
 {
     public Task ExecuteResultAsync(ActionContext context)
     {
-        return commandResult.ExecuteAsync(context.HttpContext.Response.Body);
+        return commandResult.ExecuteAsync(context.HttpContext.Response.Body, context.HttpContext.RequestAborted);
     }
 }

@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Binding;
 using Exceptions;
@@ -15,14 +16,12 @@ internal class CommandRunner(
     ParameterBinder parameterBinder)
     : ICommandRunner
 {
-    public Task<ICommandResult> RunAsync(string command)
-    {
-        return RunAsync(command, null);
-    }
-
-    public async Task<ICommandResult> RunAsync(string command, Dictionary<string, object>? contextItems)
+    public async Task<ICommandResult> RunAsync(string command,
+        IReadOnlyDictionary<string, object>? contextItems,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (!commandTokenizer.TryTokenize(command, out var tokenizedCommand, out var errorPosition))
         {
@@ -41,7 +40,8 @@ internal class CommandRunner(
 
         var context = new CommandContext
         {
-            Arguments = args
+            Arguments = args,
+            CancellationToken = cancellationToken
         };
 
         //add extra items
