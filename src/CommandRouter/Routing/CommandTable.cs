@@ -108,7 +108,7 @@ public class CommandTable(ICommandActivator commandActivator) : ICommandTable
                             "including types derived from ICommandResult.");
                     }
 
-                    AddMethod(new CommandMethod(NormaliseCommand(cmdStr), action, parameters));
+                    AddMethod(new CommandMethod(cmdStr, action, parameters));
                 }
             }
         }
@@ -245,38 +245,11 @@ public class CommandTable(ICommandActivator commandActivator) : ICommandTable
     private static IEnumerable<string> GetCommandStrings(CommandAttribute attribute,
         CommandPrefixAttribute[] prefixes)
     {
-        //TODO: Cleanup
+        var command = attribute.Command ?? "";
+
         if (prefixes.Length == 0)
-        {
-            var cmd = Parse(attribute, null);
-            if (cmd != null)
-                yield return cmd.Trim();
-        }
-        else
-        {
-            foreach (var prefix in prefixes)
-            {
-                var cmd = Parse(attribute, prefix);
-                if (cmd != null)
-                    yield return cmd.Trim();
-            }
-        }
-    }
+            return [NormaliseCommand(command)];
 
-    private static string? Parse(CommandAttribute attribute, CommandPrefixAttribute? prefix)
-    {
-        var cmd = attribute.Command;
-        var pre = prefix?.Command;
-
-        if (cmd == null && pre == null)
-            return null;
-
-        if (cmd == null)
-            return pre;
-
-        if (pre == null)
-            return cmd;
-
-        return pre + " " + cmd;
+        return prefixes.Select(prefix => NormaliseCommand(prefix.Command + " " + command));
     }
 }

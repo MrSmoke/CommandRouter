@@ -2,6 +2,7 @@ namespace CommandRouter.Tests;
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Activation;
@@ -168,6 +169,36 @@ public class CommandInvocationTests
         var ex = Assert.Throws<CommandRouterException>(() => table.RegisterCommands<DuplicateCommand>());
 
         Assert.Contains("dupe", ex.Message);
+    }
+
+    [Fact]
+    public void RegisterCommands_CommandWithNoNameOrPrefix_RegistersRootCommand()
+    {
+        var table = new CommandTable(Mock.Of<ICommandActivator>());
+
+        table.RegisterCommands<NoNameCommand>();
+
+        Assert.Equal([""], table.Keys);
+    }
+
+    [Fact]
+    public void RegisterCommands_EmptyCommandName_RegistersRootCommand()
+    {
+        var table = new CommandTable(Mock.Of<ICommandActivator>());
+
+        table.RegisterCommands<RootCommand>();
+
+        Assert.True(table.ContainsKey(""));
+    }
+
+    [Fact]
+    public void RegisterCommands_CommandWithNoNameAndPrefix_RegistersPrefix()
+    {
+        var table = new CommandTable(Mock.Of<ICommandActivator>());
+
+        table.RegisterCommands<PrefixOnlyCommand>();
+
+        Assert.Equal(["admin", "user"], table.Keys.Order());
     }
 
     private static CommandRunner CreateRunner<T>(Action<IServiceCollection>? configure = null) where T : Command
@@ -338,6 +369,32 @@ public class CommandInvocationTests
     {
         [Command("bad-return")]
         public int Bad() => 1;
+    }
+
+    private class NoNameCommand : Command
+    {
+        [Command]
+        public void Unnamed()
+        {
+        }
+    }
+
+    private class RootCommand : Command
+    {
+        [Command("")]
+        public void Root()
+        {
+        }
+    }
+
+    [CommandPrefix("user")]
+    [CommandPrefix("admin")]
+    private class PrefixOnlyCommand : Command
+    {
+        [Command]
+        public void Run()
+        {
+        }
     }
 
     private class DuplicateCommand : Command
