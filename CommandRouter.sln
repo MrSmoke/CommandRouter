@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommandRouter.Tests", "test
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommandRouter.Integration.AspNetCore", "src\CommandRouter.Integration.AspNetCore\CommandRouter.Integration.AspNetCore.csproj", "{8F999AFC-494A-42C0-A78F-C826A73B34FF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommandRouter.Integration.AspNetCore.Tests", "tests\CommandRouter.Integration.AspNetCore.Tests\CommandRouter.Integration.AspNetCore.Tests.csproj", "{CF698566-D4AC-4380-8212-345104CE0B60}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -35,6 +37,10 @@ Global
 		{8F999AFC-494A-42C0-A78F-C826A73B34FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8F999AFC-494A-42C0-A78F-C826A73B34FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8F999AFC-494A-42C0-A78F-C826A73B34FF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CF698566-D4AC-4380-8212-345104CE0B60}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF698566-D4AC-4380-8212-345104CE0B60}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF698566-D4AC-4380-8212-345104CE0B60}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF698566-D4AC-4380-8212-345104CE0B60}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
