@@ -162,7 +162,7 @@ public static class CommandRouterServiceCollectionExtensions
             var classification = DependencyClassification.Unknown;
             if (referenceAssemblies.Contains(library.Name))
             {
-                classification = DependencyClassification.MvcReference;
+                classification = DependencyClassification.CommandRouterReference;
             }
 
             return new Dependency(library, classification);
@@ -183,7 +183,7 @@ public static class CommandRouterServiceCollectionExtensions
             foreach (var candidateDependency in candidateEntry.Library.Dependencies)
             {
                 var dependencyClassification = ComputeClassification(candidateDependency.Name);
-                if (dependencyClassification is DependencyClassification.Candidate or DependencyClassification.MvcReference)
+                if (dependencyClassification is DependencyClassification.Candidate or DependencyClassification.CommandRouterReference)
                 {
                     classification = DependencyClassification.Candidate;
                     break;
@@ -223,7 +223,7 @@ public static class CommandRouterServiceCollectionExtensions
             Unknown = 0,
             Candidate = 1,
             NotCandidate = 2,
-            MvcReference = 3
+            CommandRouterReference = 3
         }
     }
 }
