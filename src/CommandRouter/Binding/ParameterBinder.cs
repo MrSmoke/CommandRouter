@@ -50,11 +50,10 @@ internal class ParameterBinder
                 throw new ParameterBindingException(
                     $"Missing value for parameter '{paramInfo.Name}'", paramInfo.Name, null);
             }
-        }
 
-        // Nullable parameter without a supplied value
-        if (value is null)
+            // Nullable parameter without a supplied value
             return null;
+        }
 
         for (var i = 0; i < _propertyConverters.Length; i++)
         {
