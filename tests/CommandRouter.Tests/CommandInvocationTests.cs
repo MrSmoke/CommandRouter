@@ -152,13 +152,24 @@ public class CommandInvocationTests
     }
 
     [Fact]
-    public void RegisterCommands_UnsupportedReturnType_ThrowsCommandRouterException()
+    public void RegisterCommands_UnsupportedReturnType_ThrowsUnsupportedReturnTypeException()
     {
         var table = new CommandTable(new DefaultCommandActivator(new ServiceCollection().BuildServiceProvider()));
 
-        var ex = Assert.Throws<CommandRouterException>(() => table.RegisterCommands<UnsupportedReturnCommand>());
+        var ex = Assert.Throws<UnsupportedReturnTypeException>(() => table.RegisterCommands<UnsupportedReturnCommand>());
 
-        Assert.Contains("bad-return", ex.Message);
+        Assert.Equal("bad-return", ex.Command);
+        Assert.Equal(typeof(int), ex.ReturnType);
+    }
+
+    [Fact]
+    public void RegisterCommands_CommandWithExtraSpaces_IsNormalised()
+    {
+        var table = new CommandTable(Mock.Of<ICommandActivator>());
+
+        table.RegisterCommands<ExtraSpacesCommand>();
+
+        Assert.Equal(["user add"], table.Keys);
     }
 
     [Fact]
@@ -393,6 +404,15 @@ public class CommandInvocationTests
     {
         [Command]
         public void Run()
+        {
+        }
+    }
+
+    [CommandPrefix(" user ")]
+    private class ExtraSpacesCommand : Command
+    {
+        [Command("  add ")]
+        public void Add()
         {
         }
     }

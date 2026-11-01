@@ -24,17 +24,6 @@ public class CommandTable(ICommandActivator commandActivator) : ICommandTable
         LoadCommands(applicationManager);
     }
 
-    /// <inheritdoc />
-    public void AddCommand(string command, Func<object?[], CommandContext, ICommandResult> action)
-    {
-        ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(action);
-
-        AddMethod(new CommandMethod(NormaliseCommand(command),
-            (args, context) => new ValueTask<ICommandResult>(action(args, context)),
-            []));
-    }
-
     /// <summary>
     /// Adds the commands declared on <typeparamref name="T"/>. Not thread-safe, so only call this at startup before
     /// any commands run
@@ -101,12 +90,7 @@ public class CommandTable(ICommandActivator commandActivator) : ICommandTable
                 foreach (var cmdStr in GetCommandStrings(attr, prefixes))
                 {
                     if (action == null)
-                    {
-                        throw new CommandRouterException(
-                            $"Command '{cmdStr}' ({type.FullName}.{method.Name}) has an unsupported return type '{method.ReturnType}'. " +
-                            "Supported return types are void, ICommandResult, Task, Task<ICommandResult>, ValueTask and ValueTask<ICommandResult>, " +
-                            "including types derived from ICommandResult.");
-                    }
+                        throw new UnsupportedReturnTypeException(cmdStr, method.ReturnType);
 
                     AddMethod(new CommandMethod(cmdStr, action, parameters));
                 }

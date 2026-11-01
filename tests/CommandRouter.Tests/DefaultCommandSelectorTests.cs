@@ -1,7 +1,7 @@
 namespace CommandRouter.Tests;
 
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using Activation;
 using CommandRouter.Binding;
 using Moq;
 using Results;
@@ -16,15 +16,17 @@ public class DefaultCommandSelectorTests
         return command;
     }
 
-    private static CommandTable CreateTable(params string[] commands)
+    private static FakeCommandTable CreateTable(params string[] commands)
     {
-        var table = new CommandTable(Mock.Of<ICommandActivator>());
+        var table = new FakeCommandTable();
 
         foreach (var command in commands)
-            table.AddCommand(command, (_, _) => EmptyResult.Empty);
+            table.Add(command, new CommandMethod(command, (_, _) => new ValueTask<ICommandResult>(EmptyResult.Empty), []));
 
         return table;
     }
+
+    private sealed class FakeCommandTable : Dictionary<string, CommandMethod>, ICommandTable;
 
     [Fact]
     public void SelectCommand_EmptyString_ReturnsMethod()
@@ -157,34 +159,6 @@ public class DefaultCommandSelectorTests
         Assert.True(result);
         Assert.Equal("", match.Method.Command);
         Assert.Equal(0, match.ArgumentStart);
-    }
-
-    [Theory]
-    [InlineData("user  add")]
-    [InlineData("  user add ")]
-    public void SelectCommand_CommandTable_CommandRegisteredWithExtraSpaces_IsNormalised(string registered)
-    {
-        var table = CreateTable(registered);
-
-        var result = new DefaultCommandSelector().TrySelect(Tokenize("user add bob"), table, out var match);
-
-        Assert.True(result);
-        Assert.Equal("user add", match.Method.Command);
-        Assert.True(table.ContainsKey("user add"));
-    }
-
-    [Fact]
-    public void SelectCommand_CommandTable_CommandAddedAfterFirstSelect_IsSelected()
-    {
-        var table = CreateTable("user");
-        var selector = new DefaultCommandSelector();
-
-        Assert.False(selector.TrySelect(Tokenize("ping"), table, out _));
-
-        table.AddCommand("ping", (_, _) => EmptyResult.Empty);
-
-        Assert.True(selector.TrySelect(Tokenize("ping"), table, out var match));
-        Assert.Equal("ping", match.Method.Command);
     }
 
     [Fact]
