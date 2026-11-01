@@ -9,7 +9,7 @@ internal class DefaultCommandSelector : ICommandSelector
     /// Selects the command matching the most leading tokens, falling back to the root command. Quoted tokens are
     /// always arguments
     /// </summary>
-    public bool TrySelect(TokenizedCommand command, ICommandTable commandTable, out CommandMatch match)
+    public bool TrySelect(TokenisedCommand command, ICommandTable commandTable, out CommandMatch match)
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(commandTable);

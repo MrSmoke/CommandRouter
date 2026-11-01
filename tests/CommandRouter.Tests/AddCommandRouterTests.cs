@@ -27,15 +27,15 @@ public class AddCommandRouterTests
     }
 
     [Fact]
-    public void AddCommandRouter_UserRegisteredTokenizerBeforeCall_IsNotOverridden()
+    public void AddCommandRouter_UserRegisteredTokeniserBeforeCall_IsNotOverridden()
     {
         var services = new ServiceCollection();
-        services.AddSingleton<ICommandTokenizer, CustomTokenizer>();
+        services.AddSingleton<ICommandTokeniser, CustomTokeniser>();
 
         services.AddCommandRouter(TestAssembly);
 
         using var provider = services.BuildServiceProvider();
-        Assert.IsType<CustomTokenizer>(provider.GetRequiredService<ICommandTokenizer>());
+        Assert.IsType<CustomTokeniser>(provider.GetRequiredService<ICommandTokeniser>());
     }
 
     [Fact]
@@ -149,19 +149,19 @@ public class AddCommandRouterTests
 
     private sealed class CustomSelector : ICommandSelector
     {
-        public bool TrySelect(TokenizedCommand command, ICommandTable commandTable, out CommandMatch match)
+        public bool TrySelect(TokenisedCommand command, ICommandTable commandTable, out CommandMatch match)
         {
             match = default;
             return false;
         }
     }
 
-    private sealed class CustomTokenizer : ICommandTokenizer
+    private sealed class CustomTokeniser : ICommandTokeniser
     {
-        public bool TryTokenize(string command, [NotNullWhen(true)] out TokenizedCommand? tokenized,
+        public bool TryTokenise(string command, [NotNullWhen(true)] out TokenisedCommand? tokenised,
             out int errorPosition)
         {
-            tokenized = null;
+            tokenised = null;
             errorPosition = 0;
             return false;
         }

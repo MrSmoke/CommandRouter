@@ -6,9 +6,9 @@ using System.Collections.Generic;
 /// <summary>
 /// A command string along with the tokens it was split into
 /// </summary>
-public sealed class TokenizedCommand
+public sealed class TokenisedCommand
 {
-    public TokenizedCommand(string raw, IReadOnlyList<CommandToken> tokens)
+    public TokenisedCommand(string raw, IReadOnlyList<CommandToken> tokens)
     {
         ArgumentNullException.ThrowIfNull(raw);
         ArgumentNullException.ThrowIfNull(tokens);

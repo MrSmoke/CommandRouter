@@ -10,9 +10,9 @@ using Xunit;
 
 public class DefaultCommandSelectorTests
 {
-    private static TokenizedCommand Tokenize(string str)
+    private static TokenisedCommand Tokenise(string str)
     {
-        Assert.True(new DefaultCommandTokenizer().TryTokenize(str, out var command, out _));
+        Assert.True(new DefaultCommandTokeniser().TryTokenise(str, out var command, out _));
         return command;
     }
 
@@ -43,7 +43,7 @@ public class DefaultCommandSelectorTests
 
         var commandSelector = new DefaultCommandSelector();
 
-        var result = commandSelector.TrySelect(Tokenize(""), commandTable.Object, out var match);
+        var result = commandSelector.TrySelect(Tokenise(""), commandTable.Object, out var match);
 
         Assert.True(result);
         Assert.Equal(commandMethod.Id, match.Method.Id);
@@ -70,7 +70,7 @@ public class DefaultCommandSelectorTests
 
         var commandSelector = new DefaultCommandSelector();
 
-        var result = commandSelector.TrySelect(Tokenize("bacon"), commandTable.Object, out var match);
+        var result = commandSelector.TrySelect(Tokenise("bacon"), commandTable.Object, out var match);
 
         Assert.True(result);
         Assert.Equal(commandMethod.Id, match.Method.Id);
@@ -84,7 +84,7 @@ public class DefaultCommandSelectorTests
 
         var commandSelector = new DefaultCommandSelector();
 
-        var result = commandSelector.TrySelect(Tokenize("nope"), commandTable.Object, out _);
+        var result = commandSelector.TrySelect(Tokenise("nope"), commandTable.Object, out _);
 
         Assert.False(result);
     }
@@ -109,12 +109,12 @@ public class DefaultCommandSelectorTests
 
         var commandSelector = new DefaultCommandSelector();
 
-        var tokenized = Tokenize("say \"hello world\"");
-        var result = commandSelector.TrySelect(tokenized, commandTable.Object, out var match);
+        var tokenised = Tokenise("say \"hello world\"");
+        var result = commandSelector.TrySelect(tokenised, commandTable.Object, out var match);
 
         Assert.True(result);
         Assert.Equal(1, match.ArgumentStart);
-        Assert.Equal("hello world", Assert.Single(tokenized.GetArguments(match.ArgumentStart)));
+        Assert.Equal("hello world", Assert.Single(tokenised.GetArguments(match.ArgumentStart)));
     }
 
     [Theory]
@@ -129,7 +129,7 @@ public class DefaultCommandSelectorTests
     {
         var table = CreateTable("user", "user add", "user add admin");
 
-        var result = new DefaultCommandSelector().TrySelect(Tokenize(input), table, out var match);
+        var result = new DefaultCommandSelector().TrySelect(Tokenise(input), table, out var match);
 
         Assert.True(result);
         Assert.Equal(expectedCommand, match.Method.Command);
@@ -144,7 +144,7 @@ public class DefaultCommandSelectorTests
     {
         var table = CreateTable("user add");
 
-        var result = new DefaultCommandSelector().TrySelect(Tokenize(input), table, out _);
+        var result = new DefaultCommandSelector().TrySelect(Tokenise(input), table, out _);
 
         Assert.False(result);
     }
@@ -158,7 +158,7 @@ public class DefaultCommandSelectorTests
     {
         var table = CreateTable("user", "user add");
 
-        var result = new DefaultCommandSelector().TrySelect(Tokenize(input), table, out var match);
+        var result = new DefaultCommandSelector().TrySelect(Tokenise(input), table, out var match);
 
         Assert.True(result);
         Assert.Equal(expectedCommand, match.Method.Command);
@@ -172,7 +172,7 @@ public class DefaultCommandSelectorTests
     {
         var table = CreateTable("", "user add");
 
-        var result = new DefaultCommandSelector().TrySelect(Tokenize(input), table, out var match);
+        var result = new DefaultCommandSelector().TrySelect(Tokenise(input), table, out var match);
 
         Assert.True(result);
         Assert.Equal("", match.Method.Command);
@@ -184,7 +184,7 @@ public class DefaultCommandSelectorTests
     {
         var table = CreateTable("user add");
 
-        Assert.False(new DefaultCommandSelector().TrySelect(Tokenize("\"user add\" bob"), table, out _));
+        Assert.False(new DefaultCommandSelector().TrySelect(Tokenise("\"user add\" bob"), table, out _));
     }
 
     [Fact]
@@ -192,7 +192,7 @@ public class DefaultCommandSelectorTests
     {
         var table = CreateTable("", "user");
 
-        var result = new DefaultCommandSelector().TrySelect(Tokenize("bacon eggs"), table, out var match);
+        var result = new DefaultCommandSelector().TrySelect(Tokenise("bacon eggs"), table, out var match);
 
         Assert.True(result);
         Assert.Equal("", match.Method.Command);
@@ -205,15 +205,15 @@ public class DefaultCommandSelectorTests
     [InlineData(2, "user add")]
     public void GetCommandName_JoinsLeadingTokenValuesWithSingleSpaces(int count, string expected)
     {
-        Assert.Equal(expected, Tokenize("user\t add  bob").GetCommandName(count));
+        Assert.Equal(expected, Tokenise("user\t add  bob").GetCommandName(count));
     }
 
     [Fact]
     public void GetArguments_ReturnsTokenValuesFromIndex()
     {
-        var tokenized = Tokenize("user add \"bob smith\" admin");
+        var tokenised = Tokenise("user add \"bob smith\" admin");
 
-        Assert.Equal(["bob smith", "admin"], tokenized.GetArguments(2));
-        Assert.Empty(tokenized.GetArguments(4));
+        Assert.Equal(["bob smith", "admin"], tokenised.GetArguments(2));
+        Assert.Empty(tokenised.GetArguments(4));
     }
 }

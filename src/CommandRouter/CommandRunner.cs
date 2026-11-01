@@ -11,7 +11,7 @@ using Routing;
 
 internal class CommandRunner(
     ICommandTable commandTable,
-    ICommandTokenizer commandTokenizer,
+    ICommandTokeniser commandTokeniser,
     ICommandSelector commandSelector,
     ParameterBinder parameterBinder)
     : ICommandRunner
@@ -23,18 +23,18 @@ internal class CommandRunner(
         ArgumentNullException.ThrowIfNull(command);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (!commandTokenizer.TryTokenize(command, out var tokenizedCommand, out var errorPosition))
+        if (!commandTokeniser.TryTokenise(command, out var tokenisedCommand, out var errorPosition))
         {
             throw new InvalidTokenException(
                 $"Invalid token starting at position {errorPosition}",
                 errorPosition);
         }
 
-        if (!commandSelector.TrySelect(tokenizedCommand, commandTable, out var match))
+        if (!commandSelector.TrySelect(tokenisedCommand, commandTable, out var match))
             throw new CommandNotFoundException(command);
 
         var method = match.Method;
-        var args = tokenizedCommand.GetArguments(match.ArgumentStart);
+        var args = tokenisedCommand.GetArguments(match.ArgumentStart);
 
         var parameters = parameterBinder.BindParameters(method.Parameters, args);
 

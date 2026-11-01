@@ -73,14 +73,14 @@ public static class CommandRouterServiceCollectionExtensions
 
         services.TryAddSingleton<ICommandTable>(sp => new CommandTable(
             sp.GetRequiredService<ICommandActivator>(),
-            sp.GetRequiredService<ICommandTokenizer>(),
+            sp.GetRequiredService<ICommandTokeniser>(),
             sp.GetRequiredService<ApplicationManager>()));
 
         services.TryAddSingleton<ICommandActivator, DefaultCommandActivator>();
 
         services.TryAddSingleton<ICommandRunner, CommandRunner>();
 
-        services.TryAddSingleton<ICommandTokenizer, DefaultCommandTokenizer>();
+        services.TryAddSingleton<ICommandTokeniser, DefaultCommandTokeniser>();
 
         services.TryAddSingleton<ICommandSelector, DefaultCommandSelector>();
 

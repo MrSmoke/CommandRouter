@@ -1,7 +1,7 @@
 namespace CommandRouter;
 
 /// <summary>
-/// The result of selecting a command for a <see cref="TokenizedCommand"/>
+/// The result of selecting a command for a <see cref="TokenisedCommand"/>
 /// </summary>
 public readonly struct CommandMatch(CommandMethod method, int argumentStart)
 {

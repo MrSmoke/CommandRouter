@@ -4,5 +4,5 @@ using Routing;
 
 public interface ICommandSelector
 {
-    bool TrySelect(TokenizedCommand command, ICommandTable commandTable, out CommandMatch match);
+    bool TrySelect(TokenisedCommand command, ICommandTable commandTable, out CommandMatch match);
 }

@@ -14,12 +14,12 @@ using Exceptions;
 using Results;
 using ParameterInfo = Binding.ParameterInfo;
 
-public class CommandTable(ICommandActivator commandActivator, ICommandTokenizer commandTokenizer) : ICommandTable
+public class CommandTable(ICommandActivator commandActivator, ICommandTokeniser commandTokeniser) : ICommandTable
 {
     private readonly Dictionary<string, CommandMethod> _methodTable = new();
 
-    public CommandTable(ICommandActivator commandActivator, ICommandTokenizer commandTokenizer,
-        ApplicationManager applicationManager) : this(commandActivator, commandTokenizer)
+    public CommandTable(ICommandActivator commandActivator, ICommandTokeniser commandTokeniser,
+        ApplicationManager applicationManager) : this(commandActivator, commandTokeniser)
     {
         LoadCommands(applicationManager);
     }
@@ -105,21 +105,21 @@ public class CommandTable(ICommandActivator commandActivator, ICommandTokenizer 
     }
 
     /// <summary>
-    /// Splits <paramref name="command"/> with the same tokenizer as the input, so names and input always match
+    /// Splits <paramref name="command"/> with the same tokeniser as the input, so names and input always match
     /// </summary>
     private string ToCommandName(string command)
     {
-        if (!commandTokenizer.TryTokenize(command, out var tokenized, out _))
+        if (!commandTokeniser.TryTokenise(command, out var tokenised, out _))
             throw new CommandRouterException($"Command '{command}' has an unterminated quote");
 
         // Quoted tokens are always arguments, so a name containing one could never match
-        foreach (var token in tokenized.Tokens)
+        foreach (var token in tokenised.Tokens)
         {
             if (token.IsQuoted)
                 throw new CommandRouterException($"Command '{command}' can't contain quotes");
         }
 
-        return tokenized.GetCommandName(tokenized.Tokens.Count);
+        return tokenised.GetCommandName(tokenised.Tokens.Count);
     }
 
     private static ParameterInfo[] CreateParameters(MethodInfo method, NullabilityInfoContext nullabilityContext)

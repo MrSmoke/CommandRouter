@@ -4,18 +4,18 @@ using System;
 using System.Linq;
 using Xunit;
 
-public class DefaultCommandTokenizerTests
+public class DefaultCommandTokeniserTests
 {
     [Theory]
     [InlineData("say \"hello", 4)]
     [InlineData("say \"hello world", 4)]
     [InlineData("say \"", 4)]
     [InlineData("say \"hello\" \"world", 12)]
-    public void TryTokenize_UnterminatedQuote_ReturnsFalseWithPosition(string input, int expectedPosition)
+    public void TryTokenise_UnterminatedQuote_ReturnsFalseWithPosition(string input, int expectedPosition)
     {
-        var tokenizer = new DefaultCommandTokenizer();
+        var tokeniser = new DefaultCommandTokeniser();
 
-        var result = tokenizer.TryTokenize(input, out var command, out var errorPosition);
+        var result = tokeniser.TryTokenise(input, out var command, out var errorPosition);
 
         Assert.False(result);
         Assert.Null(command);
@@ -23,11 +23,11 @@ public class DefaultCommandTokenizerTests
     }
 
     [Fact]
-    public void TryTokenize_TerminatedQuote_ReturnsQuotedToken()
+    public void TryTokenise_TerminatedQuote_ReturnsQuotedToken()
     {
-        var tokenizer = new DefaultCommandTokenizer();
+        var tokeniser = new DefaultCommandTokeniser();
 
-        var result = tokenizer.TryTokenize("say \"hello world\"", out var command, out var errorPosition);
+        var result = tokeniser.TryTokenise("say \"hello world\"", out var command, out var errorPosition);
 
         Assert.True(result);
         Assert.NotNull(command);
@@ -40,11 +40,11 @@ public class DefaultCommandTokenizerTests
     [InlineData("say \"  padded  \"", "  padded  ")]
     [InlineData("say \"tab\tbed\"", "tab\tbed")]
     [InlineData("say \"\"", "")]
-    public void TryTokenize_QuotedValue_IsKeptVerbatim(string input, string expectedValue)
+    public void TryTokenise_QuotedValue_IsKeptVerbatim(string input, string expectedValue)
     {
-        var tokenizer = new DefaultCommandTokenizer();
+        var tokeniser = new DefaultCommandTokeniser();
 
-        var result = tokenizer.TryTokenize(input, out var command, out _);
+        var result = tokeniser.TryTokenise(input, out var command, out _);
 
         Assert.True(result);
         Assert.NotNull(command);
@@ -59,11 +59,11 @@ public class DefaultCommandTokenizerTests
     [InlineData("\t say \n hi \r\n", new[] { "say", "hi" })]
     [InlineData("say\u00A0hello", new[] { "say", "hello" })]
     [InlineData("say \"a\tb\n\"", new[] { "say", "a\tb\n" })]
-    public void TryTokenize_AnyWhitespace_SeparatesTokens(string input, string[] expected)
+    public void TryTokenise_AnyWhitespace_SeparatesTokens(string input, string[] expected)
     {
-        var tokenizer = new DefaultCommandTokenizer();
+        var tokeniser = new DefaultCommandTokeniser();
 
-        var result = tokenizer.TryTokenize(input, out var command, out _);
+        var result = tokeniser.TryTokenise(input, out var command, out _);
 
         Assert.True(result);
         Assert.NotNull(command);
@@ -71,20 +71,20 @@ public class DefaultCommandTokenizerTests
     }
 
     [Fact]
-    public void TryTokenize_UnterminatedQuoteAfterTab_ReturnsQuotePosition()
+    public void TryTokenise_UnterminatedQuoteAfterTab_ReturnsQuotePosition()
     {
-        var tokenizer = new DefaultCommandTokenizer();
+        var tokeniser = new DefaultCommandTokeniser();
 
-        Assert.False(tokenizer.TryTokenize("say\t\"hello", out _, out var errorPosition));
+        Assert.False(tokeniser.TryTokenise("say\t\"hello", out _, out var errorPosition));
         Assert.Equal(4, errorPosition);
     }
 
     [Fact]
-    public void TryTokenize_EmptyString_ReturnsNoTokens()
+    public void TryTokenise_EmptyString_ReturnsNoTokens()
     {
-        var tokenizer = new DefaultCommandTokenizer();
+        var tokeniser = new DefaultCommandTokeniser();
 
-        var result = tokenizer.TryTokenize("", out var command, out _);
+        var result = tokeniser.TryTokenise("", out var command, out _);
 
         Assert.True(result);
         Assert.NotNull(command);
@@ -92,22 +92,22 @@ public class DefaultCommandTokenizerTests
     }
 
     [Fact]
-    public void TryTokenize_KeepsRawString()
+    public void TryTokenise_KeepsRawString()
     {
-        var tokenizer = new DefaultCommandTokenizer();
+        var tokeniser = new DefaultCommandTokeniser();
 
-        tokenizer.TryTokenize("  say   hi ", out var command, out _);
+        tokeniser.TryTokenise("  say   hi ", out var command, out _);
 
         Assert.NotNull(command);
         Assert.Equal("  say   hi ", command.Raw);
     }
 
     [Fact]
-    public void TryTokenize_ReturnsTokenPositionsInRawString()
+    public void TryTokenise_ReturnsTokenPositionsInRawString()
     {
-        var tokenizer = new DefaultCommandTokenizer();
+        var tokeniser = new DefaultCommandTokeniser();
 
-        var result = tokenizer.TryTokenize("  say  \"hello world\" bob", out var command, out _);
+        var result = tokeniser.TryTokenise("  say  \"hello world\" bob", out var command, out _);
 
         Assert.True(result);
         Assert.NotNull(command);
@@ -123,11 +123,11 @@ public class DefaultCommandTokenizerTests
     }
 
     [Fact]
-    public void TryTokenize_TokensExposeTheirValueAsASliceOfTheRawString()
+    public void TryTokenise_TokensExposeTheirValueAsASliceOfTheRawString()
     {
-        var tokenizer = new DefaultCommandTokenizer();
+        var tokeniser = new DefaultCommandTokeniser();
 
-        tokenizer.TryTokenize("say \"hello world\" bob", out var command, out _);
+        tokeniser.TryTokenise("say \"hello world\" bob", out var command, out _);
 
         Assert.NotNull(command);
         Assert.True(command.Tokens[0].ValueSpan.SequenceEqual("say"));

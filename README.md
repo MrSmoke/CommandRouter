@@ -171,6 +171,8 @@ public interface ICommandResult
 
 `StringResult` writes a string, as UTF-8 by default. `Command` has `StringResult(...)` helpers for creating one.
 
+A result is written after the command's service scope has been disposed, so it shouldn't use scoped services.
+
 
 ## Running commands
 
@@ -300,7 +302,7 @@ Register your own implementation **before** calling `AddCommandRouter`. Defaults
 aren't already registered.
 
 - `ICommandActivator`: creates command classes
-- `ICommandTokenizer`: splits the input and command names into words
+- `ICommandTokeniser`: splits the input and command names into words
 - `ICommandSelector`: picks the command for the tokens
 
 ### Custom command activation

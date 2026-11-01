@@ -4,9 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
-internal class DefaultCommandTokenizer : ICommandTokenizer
+internal class DefaultCommandTokeniser : ICommandTokeniser
 {
-    public bool TryTokenize(string str, [NotNullWhen(true)] out TokenizedCommand? command,
+    public bool TryTokenise(string str, [NotNullWhen(true)] out TokenisedCommand? command,
         out int errorPosition)
     {
         ArgumentNullException.ThrowIfNull(str);
@@ -48,7 +48,7 @@ internal class DefaultCommandTokenizer : ICommandTokenizer
             index = IgnoreWhiteSpaces(span, index);
         }
 
-        command = new TokenizedCommand(str, result);
+        command = new TokenisedCommand(str, result);
         return true;
     }
 
