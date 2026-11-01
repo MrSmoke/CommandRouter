@@ -28,6 +28,24 @@ public sealed class TokenizedCommand
     public IReadOnlyList<CommandToken> Tokens { get; }
 
     /// <summary>
+    /// Gets the command name made from the first <paramref name="count"/> token values, joined with single spaces
+    /// </summary>
+    public string GetCommandName(int count)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(count, Tokens.Count);
+
+        if (count == 0)
+            return "";
+
+        var values = new string[count];
+        for (var i = 0; i < count; i++)
+            values[i] = Tokens[i].Value;
+
+        return string.Join(' ', values);
+    }
+
+    /// <summary>
     /// Gets the values of the tokens starting at <paramref name="start"/>
     /// </summary>
     public string[] GetArguments(int start)

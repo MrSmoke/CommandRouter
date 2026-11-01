@@ -199,6 +199,15 @@ public class DefaultCommandSelectorTests
         Assert.Equal(0, match.ArgumentStart);
     }
 
+    [Theory]
+    [InlineData(0, "")]
+    [InlineData(1, "user")]
+    [InlineData(2, "user add")]
+    public void GetCommandName_JoinsLeadingTokenValuesWithSingleSpaces(int count, string expected)
+    {
+        Assert.Equal(expected, Tokenize("user\t add  bob").GetCommandName(count));
+    }
+
     [Fact]
     public void GetArguments_ReturnsTokenValuesFromIndex()
     {

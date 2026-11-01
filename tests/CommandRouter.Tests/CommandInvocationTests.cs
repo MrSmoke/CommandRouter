@@ -2,6 +2,7 @@ namespace CommandRouter.Tests;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -111,7 +112,7 @@ public class CommandInvocationTests
     {
         var probe = new ScopeProbe();
         var services = new ServiceCollection().AddSingleton(probe).AddScoped<ScopedService>();
-        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()));
+        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()), new DefaultCommandTokenizer());
         table.RegisterCommands<ScopeCommand>();
 
         await CreateRunner(table).RunAsync("scope-sync");
@@ -129,7 +130,7 @@ public class CommandInvocationTests
             created++;
             return new ReturnTypeCommand();
         });
-        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()));
+        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()), new DefaultCommandTokenizer());
         table.RegisterCommands<ReturnTypeCommand>();
 
         await CreateRunner(table).RunAsync("return-void");
@@ -145,7 +146,7 @@ public class CommandInvocationTests
         var activator = new Mock<ICommandActivator>();
         activator.Setup(a => a.CreateScope()).Returns(scope.Object);
 
-        var table = new CommandTable(activator.Object);
+        var table = new CommandTable(activator.Object, new DefaultCommandTokenizer());
         table.RegisterCommands<ReturnTypeCommand>();
 
         var ex = await Assert.ThrowsAsync<CommandRouterException>(() => CreateRunner(table).RunAsync("return-void"));
@@ -156,7 +157,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_UnsupportedReturnType_ThrowsUnsupportedReturnTypeException()
     {
-        var table = new CommandTable(new DefaultCommandActivator(new ServiceCollection().BuildServiceProvider()));
+        var table = new CommandTable(new DefaultCommandActivator(new ServiceCollection().BuildServiceProvider()), new DefaultCommandTokenizer());
 
         var ex = Assert.Throws<UnsupportedReturnTypeException>(() => table.RegisterCommands<UnsupportedReturnCommand>());
 
@@ -167,7 +168,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_CommandWithExtraSpaces_IsNormalised()
     {
-        var table = new CommandTable(Mock.Of<ICommandActivator>());
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokenizer());
 
         table.RegisterCommands<ExtraSpacesCommand>();
 
@@ -233,7 +234,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_DerivedClassesWithDifferentPrefixes_ShareBaseCommands()
     {
-        var table = new CommandTable(Mock.Of<ICommandActivator>());
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokenizer());
 
         table.RegisterCommands<AdminCommand>();
         table.RegisterCommands<OpsCommand>();
@@ -242,9 +243,54 @@ public class CommandInvocationTests
     }
 
     [Fact]
+    public void RegisterCommands_CommandWithTabsAndNewlines_IsNormalised()
+    {
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokenizer());
+
+        table.RegisterCommands<WhitespaceNameCommand>();
+
+        Assert.Equal(["user add"], table.Keys);
+    }
+
+    [Fact]
+    public void RegisterCommands_QuotedName_ThrowsCommandRouterException()
+    {
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokenizer());
+
+        var ex = Assert.Throws<CommandRouterException>(() => table.RegisterCommands<QuotedNameCommand>());
+
+        Assert.Contains("\"user add\"", ex.Message);
+    }
+
+    [Fact]
+    public void RegisterCommands_UnterminatedQuoteInName_ThrowsCommandRouterException()
+    {
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokenizer());
+
+        var ex = Assert.Throws<CommandRouterException>(() => table.RegisterCommands<UnterminatedNameCommand>());
+
+        Assert.Contains("say \"hi", ex.Message);
+    }
+
+    [Fact]
+    public async Task RunAsync_CustomTokenizer_AppliesToCommandNames()
+    {
+        var tokenizer = new SlashTokenizer();
+        var services = new ServiceCollection();
+        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()), tokenizer);
+        table.RegisterCommands<SlashNameCommand>();
+        var runner = new CommandRunner(table, tokenizer, new DefaultCommandSelector(), TestBinder.Create());
+
+        var result = await runner.RunAsync("user/add/bob");
+
+        Assert.Equal(["user add"], table.Keys);
+        Assert.Equal("bob", await ReadAsync(result));
+    }
+
+    [Fact]
     public void RegisterCommands_DuplicateCommand_ThrowsCommandRouterException()
     {
-        var table = new CommandTable(new DefaultCommandActivator(new ServiceCollection().BuildServiceProvider()));
+        var table = new CommandTable(new DefaultCommandActivator(new ServiceCollection().BuildServiceProvider()), new DefaultCommandTokenizer());
 
         var ex = Assert.Throws<CommandRouterException>(() => table.RegisterCommands<DuplicateCommand>());
 
@@ -254,7 +300,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_CommandWithNoNameOrPrefix_RegistersRootCommand()
     {
-        var table = new CommandTable(Mock.Of<ICommandActivator>());
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokenizer());
 
         table.RegisterCommands<NoNameCommand>();
 
@@ -264,7 +310,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_EmptyCommandName_RegistersRootCommand()
     {
-        var table = new CommandTable(Mock.Of<ICommandActivator>());
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokenizer());
 
         table.RegisterCommands<RootCommand>();
 
@@ -274,7 +320,7 @@ public class CommandInvocationTests
     [Fact]
     public void RegisterCommands_CommandWithNoNameAndPrefix_RegistersPrefix()
     {
-        var table = new CommandTable(Mock.Of<ICommandActivator>());
+        var table = new CommandTable(Mock.Of<ICommandActivator>(), new DefaultCommandTokenizer());
 
         table.RegisterCommands<PrefixOnlyCommand>();
 
@@ -287,7 +333,7 @@ public class CommandInvocationTests
         services.AddTransient<T>();
         configure?.Invoke(services);
 
-        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()));
+        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()), new DefaultCommandTokenizer());
         table.RegisterCommands<T>();
 
         return CreateRunner(table);
@@ -521,6 +567,60 @@ public class CommandInvocationTests
     private class OverridingCommand : PingCommandBase
     {
         public override StringResult Ping() => new("derived");
+    }
+
+    private class WhitespaceNameCommand : Command
+    {
+        [Command("\tuser\t\nadd\r\n")]
+        public void Add()
+        {
+        }
+    }
+
+    private class QuotedNameCommand : Command
+    {
+        [Command("\"user add\"")]
+        public void Add()
+        {
+        }
+    }
+
+    private class UnterminatedNameCommand : Command
+    {
+        [Command("say \"hi")]
+        public void Say()
+        {
+        }
+    }
+
+    private class SlashNameCommand : Command
+    {
+        [Command("user/add")]
+        public StringResult Add(string name) => new(name);
+    }
+
+    private sealed class SlashTokenizer : ICommandTokenizer
+    {
+        public bool TryTokenize(string str, [NotNullWhen(true)] out TokenizedCommand? command, out int errorPosition)
+        {
+            var tokens = new List<CommandToken>();
+            var start = 0;
+
+            for (var i = 0; i <= str.Length; i++)
+            {
+                if (i < str.Length && str[i] != '/')
+                    continue;
+
+                if (i > start)
+                    tokens.Add(new CommandToken(str, start, i - start, false));
+
+                start = i + 1;
+            }
+
+            command = new TokenizedCommand(str, tokens);
+            errorPosition = -1;
+            return true;
+        }
     }
 
     private class DuplicateCommand : Command

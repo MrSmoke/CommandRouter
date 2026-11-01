@@ -14,12 +14,12 @@ using Exceptions;
 using Results;
 using ParameterInfo = Binding.ParameterInfo;
 
-public class CommandTable(ICommandActivator commandActivator) : ICommandTable
+public class CommandTable(ICommandActivator commandActivator, ICommandTokenizer commandTokenizer) : ICommandTable
 {
     private readonly Dictionary<string, CommandMethod> _methodTable = new();
 
-    public CommandTable(ICommandActivator commandActivator, ApplicationManager applicationManager) :
-        this(commandActivator)
+    public CommandTable(ICommandActivator commandActivator, ICommandTokenizer commandTokenizer,
+        ApplicationManager applicationManager) : this(commandActivator, commandTokenizer)
     {
         LoadCommands(applicationManager);
     }
@@ -104,10 +104,22 @@ public class CommandTable(ICommandActivator commandActivator) : ICommandTable
             throw new CommandRouterException($"Command '{method.Command}' has already been registered");
     }
 
-    // Single spaced to match the selector
-    private static string NormaliseCommand(string command)
+    /// <summary>
+    /// Splits <paramref name="command"/> with the same tokenizer as the input, so names and input always match
+    /// </summary>
+    private string ToCommandName(string command)
     {
-        return string.Join(' ', command.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        if (!commandTokenizer.TryTokenize(command, out var tokenized, out _))
+            throw new CommandRouterException($"Command '{command}' has an unterminated quote");
+
+        // Quoted tokens are always arguments, so a name containing one could never match
+        foreach (var token in tokenized.Tokens)
+        {
+            if (token.IsQuoted)
+                throw new CommandRouterException($"Command '{command}' can't contain quotes");
+        }
+
+        return tokenized.GetCommandName(tokenized.Tokens.Count);
     }
 
     private static ParameterInfo[] CreateParameters(MethodInfo method, NullabilityInfoContext nullabilityContext)
@@ -226,14 +238,13 @@ public class CommandTable(ICommandActivator commandActivator) : ICommandTable
         return result ?? EmptyResult.Empty;
     }
 
-    private static IEnumerable<string> GetCommandStrings(CommandAttribute attribute,
-        CommandPrefixAttribute[] prefixes)
+    private IEnumerable<string> GetCommandStrings(CommandAttribute attribute, CommandPrefixAttribute[] prefixes)
     {
         var command = attribute.Command ?? "";
 
         if (prefixes.Length == 0)
-            return [NormaliseCommand(command)];
+            return [ToCommandName(command)];
 
-        return prefixes.Select(prefix => NormaliseCommand(prefix.Command + " " + command));
+        return prefixes.Select(prefix => ToCommandName(prefix.Command + " " + command));
     }
 }

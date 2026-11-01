@@ -39,8 +39,9 @@ internal class DefaultCommandTokenizer : ICommandTokenizer
             }
             else
             {
-                var length = span[index..].IndexOfAny(' ', '\"');
-                index = length == -1 ? span.Length : index + length;
+                while (index < span.Length && span[index] != '\"' && !char.IsWhiteSpace(span[index]))
+                    index++;
+
                 result.Add(new CommandToken(str, tokenStart, index - tokenStart, false));
             }
 
@@ -53,8 +54,9 @@ internal class DefaultCommandTokenizer : ICommandTokenizer
 
     private static int IgnoreWhiteSpaces(ReadOnlySpan<char> command, int index)
     {
-        var next = command[index..].IndexOfAnyExcept(' ');
+        while (index < command.Length && char.IsWhiteSpace(command[index]))
+            index++;
 
-        return next == -1 ? command.Length : index + next;
+        return index;
     }
 }

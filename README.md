@@ -1,8 +1,7 @@
 # Command Router
 [![NuGet](https://img.shields.io/nuget/v/CommandRouter.svg)](https://www.nuget.org/packages/CommandRouter)
 
-Routes text commands such as `user add bob` to methods, similar to routing in ASP.NET Core. Works in any host:
-web apps, console apps, chat bots and so on.
+Routes text commands such as `user add bob` to methods, similar to routing in ASP.NET Core.
 
 
 ## Installation
@@ -56,9 +55,8 @@ await result.ExecuteAsync(stream);   // writes "Hello bob!"
 
 ## Registration
 
-`AddCommandRouter()` scans every assembly in the app that references CommandRouter, using the entry assembly's
-dependency file (`.deps.json`) to find them. Without a dependency file, only the entry assembly is scanned. To start
-from a different assembly, pass it in:
+`AddCommandRouter()` scans every assembly that references CommandRouter, found from the entry assembly's
+`.deps.json`. Without one, only the entry assembly is scanned. To start from a different assembly, pass it in:
 
 ```c#
 services.AddCommandRouter(typeof(Program).Assembly);
@@ -66,8 +64,7 @@ services.AddCommandRouter(typeof(Program).Assembly);
 
 `AddCommandRouter` can be called more than once. Each call adds its assemblies and options to the same router.
 
-Commands are loaded when the router is first used. To find problems (duplicate commands, unsupported return types)
-at startup instead, validate the router once the service provider is built:
+Commands are loaded on first use. To catch duplicate commands and unsupported return types at startup instead:
 
 ```c#
 app.Services.ValidateCommandRouter();
@@ -85,9 +82,8 @@ A class is a command class when it is:
 
 Every public instance method with a `[Command]` attribute is a command, including methods inherited from a base class.
 
-Command classes don't need to be registered with dependency injection. They are created for each command, with their
-constructor dependencies resolved from a new service scope. If a command class is registered, that registration is
-used instead.
+Command classes don't need to be registered with dependency injection. Each run creates one in a new service scope,
+with its constructor dependencies resolved from that scope. A registered command class uses its registration.
 
 ```c#
 public class UserCommand(IUserService users) : Command
@@ -103,8 +99,7 @@ public class UserCommand(IUserService users) : Command
 
 ### Names and prefixes
 
-`[CommandPrefix]` on the class is put in front of every command name in the class. It can be used more than once to
-register each command under several prefixes:
+`[CommandPrefix]` is put in front of every command name in the class. Use it more than once for several prefixes:
 
 ```c#
 [CommandPrefix("user")]
@@ -119,19 +114,18 @@ public class UserCommand : Command
 }
 ```
 
-- `[Command]` with no name behaves the same as `[Command("")]`. With a prefix it is the prefix itself, without one it
-  is the root command.
-- The root command (`""`) runs when nothing else matches, with all the input as its arguments.
-- Spaces at the start or end of a name don't matter, so `[CommandPrefix("user ")]` with `[Command(" add")]`
-  registers `user add`. Repeated spaces between words count as one, in names and in the input.
-- Names are case-sensitive.
+- `[Command]` with no name is the same as `[Command("")]`: the prefix itself, or the root command without a prefix.
+- The root command (`""`) runs when nothing else matches, with all the input as arguments.
+- Whitespace around and between words doesn't matter, so `[CommandPrefix("user ")]` with `[Command(" add")]`
+  registers `user add`.
+- Names are case-sensitive and can't contain quotes.
 - When several commands match, the longest wins. With `user` and `user add` registered, `user add bob` runs
   `user add` with the argument `bob`.
 
 ### Inherited commands
 
-Commands declared on a base class are registered for each derived command class, using the derived class's prefixes.
-Prefixes on the base class are inherited too, so a derived class gets both.
+Commands on a base class are registered for each derived command class, with the derived class's prefixes and any
+on the base class.
 
 ```c#
 public abstract class StatusCommandBase : Command
@@ -147,9 +141,9 @@ public class AdminCommand : StatusCommandBase;   // "admin status"
 public class OpsCommand : StatusCommandBase;     // "ops status"
 ```
 
-Make shared base classes abstract. A concrete base class that meets the rules above is a command class too, so it
-registers the same commands as its derived classes and fails as a duplicate when they share a prefix. Hiding a command method with `new` and adding
-`[Command]` again is also a duplicate.
+Make shared base classes abstract. A concrete base class is a command class too, so its commands are registered
+twice and fail as duplicates when the prefixes match. Hiding a command method with `new` and adding `[Command]` again
+is also a duplicate.
 
 ### Return types
 
@@ -175,9 +169,6 @@ public interface ICommandResult
 ```
 
 `StringResult` writes a string, as UTF-8 by default. `Command` has `StringResult(...)` helpers for creating one.
-
-Results don't describe their format (plain text, JSON, HTML and so on). Hosts that need one, such as an HTTP response,
-decide it themselves.
 
 
 ## Running commands
@@ -214,14 +205,14 @@ public ICommandResult WhoAmI()
 
 ## Arguments
 
-Arguments are separated by spaces and passed to the method's parameters in order. With `[Command("add")]` on
+Arguments are separated by whitespace and passed to the method's parameters in order. With `[Command("add")]` on
 `Add(int a, int b)`, the command `add 1 2` calls `Add(1, 2)`.
 
 - Use double quotes for an argument containing spaces: `say "hello world"`. Text inside quotes is kept exactly as
   written. Quotes can't be escaped.
 - Quoted text is always an argument, never part of the command name. With `user` and `user add` registered,
   `user "add"` runs `user` with the argument `add`.
-- Only spaces separate arguments. Tabs and newlines are part of an argument.
+- Spaces, tabs and newlines all separate arguments, except inside quotes.
 - A missing argument uses the parameter's default value, or `null` for a nullable parameter. Otherwise
   `ParameterBindingException` is thrown. In code without nullable reference types enabled, every reference type
   parameter counts as nullable.
@@ -237,7 +228,7 @@ Built in:
 - enums, by name (ignoring case) or by a defined number. Combined values are allowed for `[Flags]` enums.
 - nullable versions of all of these
 
-Values are parsed with the invariant culture, so `1.5` is always one and a half.
+Values are parsed with the invariant culture.
 
 ### Custom converters
 
@@ -257,7 +248,7 @@ public class PointConverter : IPropertyConverter
 }
 ```
 
-Add converters when registering the router, or separately through the options pattern:
+Add converters when registering the router or with the options pattern:
 
 ```c#
 services.AddCommandRouter(options => options.PropertyConverters.Add(new PointConverter()));
@@ -277,7 +268,7 @@ Exceptions thrown by a command itself are passed through unchanged.
 |---|---|
 | `CommandNotFoundException` | No command matches the input |
 | `InvalidTokenException` | The input is missing a closing quote. `Position` is where the quoted argument starts |
-| `ParameterBindingException` | An argument is missing or can't be converted. `ParameterName` and `Value` say which. If a converter failed, `InnerException` has its error |
+| `ParameterBindingException` | An argument is missing or can't be converted. See `ParameterName`, `Value` and `InnerException` |
 | `UnsupportedReturnTypeException` | A command method has an unsupported return type (when commands are loaded) |
 | `CommandRouterException` | A command name is registered twice (when commands are loaded) |
 
@@ -304,11 +295,11 @@ catch (ParameterBindingException e)
 
 ## Customisation
 
-Register your own implementation **before** calling `AddCommandRouter`. The router only adds its defaults for services
-that aren't registered yet.
+Register your own implementation **before** calling `AddCommandRouter`. Defaults are only added for services that
+aren't already registered.
 
 - `ICommandActivator`: creates command classes
-- `ICommandTokenizer`: splits the input into tokens
+- `ICommandTokenizer`: splits the input and command names into words
 - `ICommandSelector`: picks the command for the tokens
 
 ### Custom command activation
@@ -356,8 +347,5 @@ public async Task<IActionResult> Run(string command)
 }
 ```
 
-`CommandRouterResult` doesn't set `Content-Type`, because only the app knows whether a result is plain text, JSON,
-HTML or something else. Set it on the response before returning the result.
-
-The request's `RequestAborted` token is passed to the result, so `StringResult` stops writing if the client
-disconnects.
+`CommandRouterResult` doesn't set `Content-Type`, so set it on the response before returning the result.
+`RequestAborted` is passed to the result, so `StringResult` stops writing if the client disconnects.

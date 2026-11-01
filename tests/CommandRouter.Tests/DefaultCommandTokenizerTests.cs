@@ -52,6 +52,33 @@ public class DefaultCommandTokenizerTests
         Assert.Equal(input.Length - 4, command.Tokens[1].Length);
     }
 
+    [Theory]
+    [InlineData("ping\n", new[] { "ping" })]
+    [InlineData("user add bob\r\n", new[] { "user", "add", "bob" })]
+    [InlineData("say\thello", new[] { "say", "hello" })]
+    [InlineData("\t say \n hi \r\n", new[] { "say", "hi" })]
+    [InlineData("say\u00A0hello", new[] { "say", "hello" })]
+    [InlineData("say \"a\tb\n\"", new[] { "say", "a\tb\n" })]
+    public void TryTokenize_AnyWhitespace_SeparatesTokens(string input, string[] expected)
+    {
+        var tokenizer = new DefaultCommandTokenizer();
+
+        var result = tokenizer.TryTokenize(input, out var command, out _);
+
+        Assert.True(result);
+        Assert.NotNull(command);
+        Assert.Equal(expected, command.Tokens.Select(t => t.Value));
+    }
+
+    [Fact]
+    public void TryTokenize_UnterminatedQuoteAfterTab_ReturnsQuotePosition()
+    {
+        var tokenizer = new DefaultCommandTokenizer();
+
+        Assert.False(tokenizer.TryTokenize("say\t\"hello", out _, out var errorPosition));
+        Assert.Equal(4, errorPosition);
+    }
+
     [Fact]
     public void TryTokenize_EmptyString_ReturnsNoTokens()
     {

@@ -1,7 +1,6 @@
 namespace CommandRouter;
 
 using System;
-using System.Linq;
 using Routing;
 
 internal class DefaultCommandSelector : ICommandSelector
@@ -24,9 +23,7 @@ internal class DefaultCommandSelector : ICommandSelector
         for (var index = nameLength; index > -1; --index)
         {
             //index 0 is the root/default route
-            var cmd = index == 0
-                ? ""
-                : string.Join(" ", tokens.Take(index).Select(t => t.Value));
+            var cmd = command.GetCommandName(index);
 
             if (!commandTable.TryGetValue(cmd, out var method))
                 continue;
