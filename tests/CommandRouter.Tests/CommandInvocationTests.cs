@@ -211,6 +211,37 @@ public class CommandInvocationTests
     }
 
     [Fact]
+    public async Task RunAsync_InheritedCommand_UsesDerivedPrefixAndInstance()
+    {
+        var runner = CreateRunner<AdminCommand>();
+
+        var result = await runner.RunAsync("admin status");
+
+        Assert.Equal("status:" + nameof(AdminCommand), await ReadAsync(result));
+    }
+
+    [Fact]
+    public async Task RunAsync_OverrideWithoutAttribute_KeepsBaseCommandName()
+    {
+        var runner = CreateRunner<OverridingCommand>();
+
+        var result = await runner.RunAsync("ping");
+
+        Assert.Equal("derived", await ReadAsync(result));
+    }
+
+    [Fact]
+    public void RegisterCommands_DerivedClassesWithDifferentPrefixes_ShareBaseCommands()
+    {
+        var table = new CommandTable(Mock.Of<ICommandActivator>());
+
+        table.RegisterCommands<AdminCommand>();
+        table.RegisterCommands<OpsCommand>();
+
+        Assert.Equal(["admin status", "ops status"], table.Keys.Order());
+    }
+
+    [Fact]
     public void RegisterCommands_DuplicateCommand_ThrowsCommandRouterException()
     {
         var table = new CommandTable(new DefaultCommandActivator(new ServiceCollection().BuildServiceProvider()));
@@ -467,6 +498,29 @@ public class CommandInvocationTests
         {
             probe.Context = Context;
         }
+    }
+
+    private abstract class StatusCommandBase : Command
+    {
+        [Command("status")]
+        public StringResult Status() => new("status:" + GetType().Name);
+    }
+
+    [CommandPrefix("admin")]
+    private class AdminCommand : StatusCommandBase;
+
+    [CommandPrefix("ops")]
+    private class OpsCommand : StatusCommandBase;
+
+    private abstract class PingCommandBase : Command
+    {
+        [Command("ping")]
+        public virtual StringResult Ping() => new("base");
+    }
+
+    private class OverridingCommand : PingCommandBase
+    {
+        public override StringResult Ping() => new("derived");
     }
 
     private class DuplicateCommand : Command

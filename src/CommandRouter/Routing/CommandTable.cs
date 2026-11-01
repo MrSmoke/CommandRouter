@@ -70,7 +70,7 @@ public class CommandTable(ICommandActivator commandActivator) : ICommandTable
     {
         var typeInfo = type.GetTypeInfo();
 
-        var methods = typeInfo.GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance);
+        var methods = typeInfo.GetMethods(BindingFlags.Public | BindingFlags.Instance);
         var prefixes = typeInfo.GetCustomAttributes<CommandPrefixAttribute>().ToArray();
         var nullabilityContext = new NullabilityInfoContext();
 
