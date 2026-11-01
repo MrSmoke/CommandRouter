@@ -84,6 +84,7 @@ Every public instance method with a `[Command]` attribute is a command, includin
 
 Command classes don't need to be registered with dependency injection. Each run creates one in a new service scope,
 with its constructor dependencies resolved from that scope. A registered command class uses its registration.
+Otherwise the class needs a single public constructor, or one marked `[ActivatorUtilitiesConstructor]`.
 
 ```c#
 public class UserCommand(IUserService users) : Command
@@ -275,7 +276,7 @@ Exceptions thrown by a command itself are passed through unchanged.
 Some errors come from .NET rather than the router:
 
 - `OperationCanceledException` if the cancellation token is already cancelled when `RunAsync` is called
-- `InvalidOperationException` from dependency injection if a command class's constructor dependency isn't registered
+- `InvalidOperationException` from dependency injection when a command runs, if its class can't be created
 
 ```c#
 try
