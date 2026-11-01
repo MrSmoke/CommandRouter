@@ -6,26 +6,16 @@ using Commands;
 
 internal sealed class ApplicationManager
 {
-    private CommandFeature? _commandFeature;
-
     internal readonly IList<Assembly> Assemblies = new List<Assembly>();
 
-    internal void PopulateFeature(CommandFeature feature)
-    {
-        DefaultCommandFeatureProvider.PopulateFeature(Assemblies, feature);
-    }
-
     /// <summary>
-    /// Scans <see cref="Assemblies"/> for commands on the first call, then returns the cached result
+    /// Scans <see cref="Assemblies"/> for command classes
     /// </summary>
     internal CommandFeature GetCommandFeature()
     {
-        if (_commandFeature != null)
-            return _commandFeature;
-
         var feature = new CommandFeature();
-        PopulateFeature(feature);
+        DefaultCommandFeatureProvider.PopulateFeature(Assemblies, feature);
 
-        return _commandFeature ??= feature;
+        return feature;
     }
 }

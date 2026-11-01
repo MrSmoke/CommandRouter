@@ -125,15 +125,14 @@ public class AddCommandRouterTests
     }
 
     [Fact]
-    public void ApplicationManager_GetCommandFeature_ScansOnlyOnce()
+    public void ApplicationManager_GetCommandFeature_FindsCommandsInAssemblies()
     {
         var manager = new ApplicationManager();
         manager.Assemblies.Add(TestAssembly);
 
-        var first = manager.GetCommandFeature();
+        var feature = manager.GetCommandFeature();
 
-        Assert.Same(first, manager.GetCommandFeature());
-        Assert.Contains(first.Commands, t => t.AsType() == typeof(TestCommand));
+        Assert.Contains(feature.Commands, t => t.AsType() == typeof(TestCommand));
     }
 
     private sealed class CustomSelector : ICommandSelector
