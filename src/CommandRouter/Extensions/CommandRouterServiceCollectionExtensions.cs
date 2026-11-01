@@ -6,7 +6,6 @@ using System.Linq;
 using System.Reflection;
 using Activation;
 using Binding;
-using Converters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.DependencyModel;
@@ -35,7 +34,7 @@ public static class CommandRouterServiceCollectionExtensions
 
     public static IServiceCollection AddCommandRouter(this IServiceCollection services, Assembly entryAssembly)
     {
-        return AddCore(services, entryAssembly, new CommandRouterOptions());
+        return AddCore(services, entryAssembly);
     }
 
     public static IServiceCollection AddCommandRouter(this IServiceCollection services, Assembly entryAssembly,
@@ -43,10 +42,10 @@ public static class CommandRouterServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(optionsFunc);
 
-        var options = new CommandRouterOptions();
-        optionsFunc(options);
+        AddCore(services, entryAssembly);
+        services.Configure(optionsFunc);
 
-        return AddCore(services, entryAssembly, options);
+        return services;
     }
 
     /// <summary>
@@ -62,10 +61,9 @@ public static class CommandRouterServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers the router. If it is already registered, the options are ignored
+    /// Registers the router services. Only the first call's assembly is scanned
     /// </summary>
-    private static IServiceCollection AddCore(IServiceCollection services, Assembly entryAssembly,
-        CommandRouterOptions options)
+    private static IServiceCollection AddCore(IServiceCollection services, Assembly entryAssembly)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(entryAssembly);
@@ -87,10 +85,8 @@ public static class CommandRouterServiceCollectionExtensions
 
         services.TryAddSingleton<ICommandSelector, DefaultCommandSelector>();
 
-        //user converters first, the built-in converter is the fallback
-        var converters = new List<IPropertyConverter>(options.PropertyConverters) { new SystemTypeConverter() };
-
-        services.TryAddSingleton(new ParameterBinder(converters));
+        services.AddOptions();
+        services.TryAddSingleton<ParameterBinder>();
 
         return services;
     }

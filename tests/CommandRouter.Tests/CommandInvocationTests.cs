@@ -6,9 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Activation;
 using Attributes;
-using CommandRouter.Binding;
 using Commands;
-using Converters;
 using Exceptions;
 using Microsoft.Extensions.DependencyInjection;
 using Results;
@@ -151,7 +149,7 @@ public class CommandInvocationTests
     private static CommandRunner CreateRunner(ICommandTable table)
     {
         return new CommandRunner(table, new DefaultCommandTokenizer(), new DefaultCommandSelector(),
-            new ParameterBinder([new SystemTypeConverter()]));
+            TestBinder.Create());
     }
 
     private static async Task<string> ReadAsync(ICommandResult result)

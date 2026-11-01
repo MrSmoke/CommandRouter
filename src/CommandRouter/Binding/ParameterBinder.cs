@@ -1,22 +1,21 @@
 ﻿namespace CommandRouter.Binding;
 
 using System;
-using System.Collections.Generic;
 using Converters;
 using Exceptions;
+using Extensions;
+using Microsoft.Extensions.Options;
 
 internal class ParameterBinder
 {
-    private readonly IList<IPropertyConverter> _propertyConverters;
+    private readonly IPropertyConverter[] _propertyConverters;
 
-    internal ParameterBinder(IList<IPropertyConverter> propertyConverters)
+    /// <summary>
+    /// Uses the configured converters, falling back to <see cref="SystemTypeConverter"/>
+    /// </summary>
+    public ParameterBinder(IOptions<CommandRouterOptions> options)
     {
-        _propertyConverters = propertyConverters;
-    }
-
-    internal void AddConverter(IPropertyConverter propertyConverter)
-    {
-        _propertyConverters.Add(propertyConverter);
+        _propertyConverters = [..options.Value.PropertyConverters, new SystemTypeConverter()];
     }
 
     internal object?[] BindParameters(ParameterInfo[] parameterInfos, string[] parameters)
@@ -57,7 +56,7 @@ internal class ParameterBinder
         if (value is null)
             return null;
 
-        for (var i = 0; i < _propertyConverters.Count; i++)
+        for (var i = 0; i < _propertyConverters.Length; i++)
         {
             var converter = _propertyConverters[i];
 

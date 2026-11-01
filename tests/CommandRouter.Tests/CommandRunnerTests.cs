@@ -1,13 +1,10 @@
 ﻿namespace CommandRouter.Tests;
 
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Activation;
 using Attributes;
-using CommandRouter.Binding;
 using Commands;
-using Converters;
 using Exceptions;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -33,7 +30,7 @@ public class CommandRunnerTests
         var commandSelector = new Mock<ICommandSelector>(MockBehavior.Strict);
         commandSelector.Setup(c => c.TrySelect(It.Is<TokenizedCommand>(t => t.Tokens.Count == 1 && t.Tokens[0].Value == "test"), commandTable.Object, out outMatch)).Returns(true);
 
-        var pBinder = new ParameterBinder([]);
+        var pBinder = TestBinder.Create();
 
         var commandRunner = new CommandRunner(commandTable.Object, new DefaultCommandTokenizer(), commandSelector.Object, pBinder);
 
@@ -52,7 +49,7 @@ public class CommandRunnerTests
         var commandTable = new Mock<ICommandTable>();
         commandTable.Setup(c => c.TryGetValue("say", out commandMethod)).Returns(true);
 
-        var commandRunner = new CommandRunner(commandTable.Object, new DefaultCommandTokenizer(), new DefaultCommandSelector(), new ParameterBinder([]));
+        var commandRunner = new CommandRunner(commandTable.Object, new DefaultCommandTokenizer(), new DefaultCommandSelector(), TestBinder.Create());
 
         var ex = await Assert.ThrowsAsync<InvalidTokenException>(() => commandRunner.RunAsync("say \"hello"));
 
@@ -75,7 +72,7 @@ public class CommandRunnerTests
         var tokenizer = new Mock<ICommandTokenizer>();
         tokenizer.Setup(t => t.TryTokenize("anything", out custom, out It.Ref<int>.IsAny)).Returns(true);
 
-        var commandRunner = new CommandRunner(commandTable.Object, tokenizer.Object, new DefaultCommandSelector(), new ParameterBinder([]));
+        var commandRunner = new CommandRunner(commandTable.Object, tokenizer.Object, new DefaultCommandSelector(), TestBinder.Create());
 
         await commandRunner.RunAsync("anything");
 
@@ -87,7 +84,7 @@ public class CommandRunnerTests
     {
         var commandTable = new Mock<ICommandTable>();
 
-        var commandRunner = new CommandRunner(commandTable.Object, new DefaultCommandTokenizer(), new DefaultCommandSelector(), new ParameterBinder([]));
+        var commandRunner = new CommandRunner(commandTable.Object, new DefaultCommandTokenizer(), new DefaultCommandSelector(), TestBinder.Create());
 
         await Assert.ThrowsAsync<CommandNotFoundException>(() => commandRunner.RunAsync("nope"));
     }
@@ -107,7 +104,7 @@ public class CommandRunnerTests
         commandTable.RegisterCommands<TestCommand>();
 
         var runner = new CommandRunner(commandTable, new DefaultCommandTokenizer(), new DefaultCommandSelector(),
-            new ParameterBinder(new List<IPropertyConverter>()));
+            TestBinder.Create());
 
         // Test sync
         await runner.RunAsync("test");

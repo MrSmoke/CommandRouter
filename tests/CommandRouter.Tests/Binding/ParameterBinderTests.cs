@@ -1,7 +1,6 @@
 ﻿namespace CommandRouter.Tests.Binding;
 
 using System;
-using System.Collections.Generic;
 using CommandRouter.Binding;
 using Converters;
 using Exceptions;
@@ -27,7 +26,7 @@ public class ParameterBinderTests
 
         var mockBinder = new Mock<IPropertyConverter>();
 
-        var binder = new ParameterBinder(new List<IPropertyConverter> { mockBinder.Object });
+        var binder = TestBinder.Create(mockBinder.Object);
 
         var objs = binder.BindParameters(parameterInfos, []);
 
@@ -45,7 +44,7 @@ public class ParameterBinderTests
             new() { Name = "c", Type = typeof(int), DefaultValue = 7, HasDefaultValue = true }
         ];
 
-        var binder = new ParameterBinder(new List<IPropertyConverter> { CreatePassThroughConverter() });
+        var binder = TestBinder.Create(CreatePassThroughConverter());
 
         var objs = binder.BindParameters(parameterInfos, ["x"]);
 
@@ -65,7 +64,7 @@ public class ParameterBinderTests
             new() { Name = "c", Type = typeof(int) }
         ];
 
-        var binder = new ParameterBinder(new List<IPropertyConverter> { CreatePassThroughConverter() });
+        var binder = TestBinder.Create(CreatePassThroughConverter());
 
         var ex = Assert.Throws<ParameterBindingException>(() => binder.BindParameters(parameterInfos, ["x"]));
         Assert.Equal("c", ex.ParameterName);
@@ -81,7 +80,7 @@ public class ParameterBinderTests
     {
         ParameterInfo[] parameterInfos = [new() { Name = "p", Type = type }];
 
-        var binder = new ParameterBinder(new List<IPropertyConverter> { new SystemTypeConverter() });
+        var binder = TestBinder.Create();
 
         var ex = Assert.Throws<ParameterBindingException>(() => binder.BindParameters(parameterInfos, [value]));
         Assert.Equal("p", ex.ParameterName);
@@ -94,7 +93,7 @@ public class ParameterBinderTests
     {
         ParameterInfo[] parameterInfos = [new() { Name = "p", Type = typeof(object) }];
 
-        var binder = new ParameterBinder(new List<IPropertyConverter> { new SystemTypeConverter() });
+        var binder = TestBinder.Create();
 
         var ex = Assert.Throws<ParameterBindingException>(() => binder.BindParameters(parameterInfos, ["x"]));
         Assert.Equal("p", ex.ParameterName);

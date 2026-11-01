@@ -1,7 +1,10 @@
 namespace CommandRouter.Tests;
 
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Routing;
@@ -80,6 +83,36 @@ public class AddCommandRouterTests
 
         Assert.Same(provider, provider.ValidateCommandRouter());
         Assert.True(provider.GetRequiredService<ICommandTable>().Count > 0);
+    }
+
+    [Fact]
+    public async Task AddCommandRouter_OptionsOnSecondCall_AreApplied()
+    {
+        var services = new ServiceCollection();
+        services.AddCommandRouter(TestAssembly);
+        services.AddCommandRouter(TestAssembly, o => o.PropertyConverters.Add(new CustomValueConverter()));
+
+        Assert.Equal("custom:abc", await RunAsync(services, "converter-custom abc"));
+    }
+
+    [Fact]
+    public async Task AddCommandRouter_OptionsConfiguredSeparately_AreApplied()
+    {
+        var services = new ServiceCollection();
+        services.AddCommandRouter(TestAssembly);
+        services.Configure<CommandRouterOptions>(o => o.PropertyConverters.Add(new CustomValueConverter()));
+
+        Assert.Equal("custom:abc", await RunAsync(services, "converter-custom abc"));
+    }
+
+    private static async Task<string> RunAsync(IServiceCollection services, string command)
+    {
+        using var provider = services.BuildServiceProvider();
+        var result = await provider.GetRequiredService<ICommandRunner>().RunAsync(command);
+
+        using var stream = new MemoryStream();
+        await result.ExecuteAsync(stream);
+        return Encoding.UTF8.GetString(stream.ToArray());
     }
 
     [Fact]
