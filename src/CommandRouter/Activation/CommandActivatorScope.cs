@@ -10,7 +10,7 @@ public class CommandActivatorScope(AsyncServiceScope serviceScope) : ICommandAct
 
     public object? Create(Type type)
     {
-        return serviceScope.ServiceProvider.GetService(type);
+        return CommandFactory.Create(serviceScope.ServiceProvider, type);
     }
 
     public ICommandActivatorScope CreateScope()

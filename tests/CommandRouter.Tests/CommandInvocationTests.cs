@@ -9,6 +9,7 @@ using Attributes;
 using Commands;
 using Exceptions;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using Results;
 using Routing;
 using Xunit;
@@ -103,13 +104,48 @@ public class CommandInvocationTests
     }
 
     [Fact]
-    public async Task RunAsync_CommandNotRegisteredInContainer_ThrowsCommandRouterException()
+    public async Task RunAsync_CommandNotRegisteredInContainer_IsCreatedWithItsDependencies()
     {
-        var table = new CommandTable(new DefaultCommandActivator(new ServiceCollection().BuildServiceProvider()));
-        table.RegisterCommands<ReturnTypeCommand>();
-        var runner = CreateRunner(table);
+        var probe = new ScopeProbe();
+        var services = new ServiceCollection().AddSingleton(probe).AddScoped<ScopedService>();
+        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()));
+        table.RegisterCommands<ScopeCommand>();
 
-        var ex = await Assert.ThrowsAsync<CommandRouterException>(() => runner.RunAsync("return-void"));
+        await CreateRunner(table).RunAsync("scope-sync");
+
+        Assert.False(probe.DisposedWhileRunning);
+        Assert.True(probe.Disposed);
+    }
+
+    [Fact]
+    public async Task RunAsync_CommandRegisteredInContainer_UsesRegistration()
+    {
+        var created = 0;
+        var services = new ServiceCollection().AddTransient(_ =>
+        {
+            created++;
+            return new ReturnTypeCommand();
+        });
+        var table = new CommandTable(new DefaultCommandActivator(services.BuildServiceProvider()));
+        table.RegisterCommands<ReturnTypeCommand>();
+
+        await CreateRunner(table).RunAsync("return-void");
+
+        Assert.Equal(1, created);
+    }
+
+    [Fact]
+    public async Task RunAsync_ActivatorReturnsNonCommand_ThrowsCommandRouterException()
+    {
+        var scope = new Mock<ICommandActivatorScope>();
+        scope.Setup(s => s.CommandActivator.Create(It.IsAny<Type>())).Returns(new object());
+        var activator = new Mock<ICommandActivator>();
+        activator.Setup(a => a.CreateScope()).Returns(scope.Object);
+
+        var table = new CommandTable(activator.Object);
+        table.RegisterCommands<ReturnTypeCommand>();
+
+        var ex = await Assert.ThrowsAsync<CommandRouterException>(() => CreateRunner(table).RunAsync("return-void"));
 
         Assert.Contains(nameof(ReturnTypeCommand), ex.Message);
     }

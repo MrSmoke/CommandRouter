@@ -7,7 +7,7 @@ public class DefaultCommandActivator(IServiceProvider serviceProvider) : IComman
 {
     public object? Create(Type type)
     {
-        return serviceProvider.GetService(type);
+        return CommandFactory.Create(serviceProvider, type);
     }
 
     public ICommandActivatorScope CreateScope()

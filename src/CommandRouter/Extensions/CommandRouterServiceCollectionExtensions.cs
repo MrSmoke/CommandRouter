@@ -61,7 +61,7 @@ public static class CommandRouterServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers the router services. Only the first call's assembly is scanned
+    /// Registers the router services and adds the assembly to the ones scanned for commands
     /// </summary>
     private static IServiceCollection AddCore(IServiceCollection services, Assembly entryAssembly)
     {
@@ -70,8 +70,6 @@ public static class CommandRouterServiceCollectionExtensions
 
         var manager = GetApplicationManager(services, entryAssembly);
         services.TryAddSingleton(manager);
-
-        RegisterCommands(services, manager);
 
         services.TryAddSingleton<ICommandTable>(sp => new CommandTable(
             sp.GetRequiredService<ICommandActivator>(),
@@ -100,27 +98,17 @@ public static class CommandRouterServiceCollectionExtensions
 
     private static ApplicationManager GetApplicationManager(IServiceCollection services, Assembly entryAssembly)
     {
-        var manager = GetServiceFromCollection<ApplicationManager>(services);
-        if (manager != null)
-            return manager;
-
-        manager = new ApplicationManager();
+        var manager = GetServiceFromCollection<ApplicationManager>(services) ?? new ApplicationManager();
 
         var context = DependencyContext.Load(entryAssembly);
 
         foreach (var assembly in GetCandidateAssemblies(entryAssembly, context))
-            manager.Assemblies.Add(assembly);
+        {
+            if (!manager.Assemblies.Contains(assembly))
+                manager.Assemblies.Add(assembly);
+        }
 
         return manager;
-    }
-
-    private static void RegisterCommands(IServiceCollection services, ApplicationManager manager)
-    {
-        //register command classes in DI
-        foreach (var command in manager.GetCommandFeature().Commands)
-        {
-            services.TryAddTransient(command.AsType());
-        }
     }
 
     private static T? GetServiceFromCollection<T>(IServiceCollection services)

@@ -167,7 +167,7 @@ public class CommandTable(ICommandActivator commandActivator) : ICommandTable
             {
                 throw new CommandRouterException(
                     $"Unable to resolve command class '{classType.FullName}'. " +
-                    "Make sure it is registered with the service provider and derives from Command.");
+                    "The activator must return an instance that derives from Command.");
             }
 
             command.Context = context;

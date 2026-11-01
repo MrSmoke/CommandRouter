@@ -86,6 +86,26 @@ public class AddCommandRouterTests
     }
 
     [Fact]
+    public async Task AddCommandRouter_SecondCallWithDifferentAssembly_AddsItsCommands()
+    {
+        var services = new ServiceCollection();
+        services.AddCommandRouter(typeof(ServiceCollection).Assembly);
+        services.AddCommandRouter(TestAssembly, o => o.PropertyConverters.Add(new CustomValueConverter()));
+
+        Assert.Equal("custom:abc", await RunAsync(services, "converter-custom abc"));
+    }
+
+    [Fact]
+    public void AddCommandRouter_DoesNotRegisterCommandClasses()
+    {
+        var services = new ServiceCollection();
+
+        services.AddCommandRouter(TestAssembly);
+
+        Assert.DoesNotContain(services, d => d.ServiceType == typeof(TestCommand));
+    }
+
+    [Fact]
     public async Task AddCommandRouter_OptionsOnSecondCall_AreApplied()
     {
         var services = new ServiceCollection();
